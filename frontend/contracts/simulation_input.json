@@ -1,0 +1,52 @@
+{
+  "simulation_id": "SIM-001",
+  "scenario_id": "1.1",
+  "initial_state": {
+    "blue": {"BLUE-BDE-1": {"location": "Sector-4", "strength": 100}},
+    "red": {"RED-DIV-1": {"location": "Sector-1", "strength": 120}},
+    "third_party": {},
+    "civilian": {}
+  },
+  "environment": {
+    "mobility_factors": {"tracked": 0.85, "wheeled": 0.65},
+    "visibility_km": 8.0
+  },
+  "blue_plan": {
+    "course_of_action_id": "BLUE-COA-001",
+    "actions": [
+      {
+        "action_id": "ACT-B01",
+        "unit_id": "BLUE-BDE-1",
+        "action_type": "FORTIFY",
+        "target_location": "LOC-ALPHA"
+      }
+    ],
+    "resource_allocation": {
+      "fuel": 20,
+      "ammo": 15
+    }
+  },
+  "red_plan": {
+    "response_id": "RED-RESP-001",
+    "actions": [
+      {
+        "action_id": "ACT-R01",
+        "unit_id": "RED-DIV-1",
+        "action_type": "ADVANCE_AND_ENGAGE",
+        "target_location": "LOC-BRAVO"
+      }
+    ],
+    "resource_allocation": {
+      "fuel": 35,
+      "ammo": 30
+    }
+  },
+  "rules": {
+    "engagement_rules": ["Direct line of sight required"],
+    "movement_rules": ["Rain reduces wheeled speed by 35%"],
+    "detection_rules": ["Visual range capped at 8km"],
+    "simulation_rules": ["Max simulation ticks: 10"]
+  },
+  "time_horizon": "24h",
+  "seed": 42
+}

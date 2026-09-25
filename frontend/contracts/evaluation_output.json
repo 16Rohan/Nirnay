@@ -1,0 +1,63 @@
+{
+  "agent": "evaluation",
+  "scenario_id": "1.1",
+  "simulation_id": "SIM-001",
+  "assessment": {
+    "objective_results": [
+      {"objective": "Secure Forward Logistics Point Alpha", "status": "SUCCESS", "score": 0.95},
+      {"objective": "Deter adversarial advance", "status": "PARTIAL", "score": 0.65}
+    ],
+    "blue_performance": {
+      "attrition_rate": 0.06,
+      "tactical_success": "HIGH",
+      "sustainability": "GOOD"
+    },
+    "red_performance": {
+      "attrition_rate": 0.10,
+      "objective_progress": "HALTED_AT_RIVER"
+    },
+    "resource_effects": {
+      "blue_fuel_remaining_hours": 52,
+      "red_fuel_remaining_hours": 38
+    },
+    "risks": [
+      "Prolonged standoff could exhaust supplies if supply convoy is intercepted"
+    ],
+    "tradeoffs": [
+      "Defensive entrenchment saved friendly lives but allowed adversary to consolidate north of the river"
+    ],
+    "uncertainties": [
+      "Adversary flanking maneuver via mountain pass remains unverified"
+    ]
+  },
+  "emergent_events": [
+    {
+      "event_id": "EVT-001",
+      "type": "diplomatic_development",
+      "description": "Third-party regional mediator offers 24-hour ceasefire talk proposal",
+      "impact": "May alter Rules of Engagement and prevent offensive pursuit",
+      "requires_response": true
+    }
+  ],
+  "simulation_control": {
+    "concluded": false,
+    "termination_reason": null,
+    "continue_reason": "Adversary retains combat capability north of river; ceasefire proposal requires strategic determination",
+    "next_scenario_required": true
+  },
+  "next_scenario": {
+    "scenario_id": "1.1.1",
+    "parent_scenario_id": "1.1",
+    "reason": "Address emergent ceasefire proposal while maintaining deterrence posture across the river",
+    "required_changes": [
+      "Incorporate diplomatic mediation rules",
+      "Adjust ROE to conditional non-engagement"
+    ],
+    "required_information": [
+      "Verification of Red commander's willingness to respect ceasefire buffer"
+    ]
+  },
+  "strategic_conclusion": "Phase 1 defensive objective secured with minimal casualties. Continued escalation deterrence hinges on negotiating from fortified position at LOC-ALPHA.",
+  "human_review_required": true,
+  "Dynamic": {}
+}
