@@ -149,22 +149,8 @@ class ResolvedAgentContext(BaseModel):
 
 
 # ==========================================
-# 4. Action & Decision Contracts
+# 4. Blue Team Output Contract
 # ==========================================
-
-class ActionPayload(BaseModel):
-    action_id: str
-    actor: str = "blue"
-    unit_id: Optional[str] = None
-    action_type: str = "HOLD"
-    target_location: Optional[str] = None
-    resource_requirements: Dict[str, Any] = Field(default_factory=dict)
-    expected_effect: str = ""
-    cost: float = 0.0
-    risk: str = "LOW"
-    prerequisites: List[str] = Field(default_factory=list)
-    duration: str = "6h"
-
 
 class BlueDecision(BaseModel):
     course_of_action_id: str
@@ -179,7 +165,7 @@ class BlueTeamOutput(BaseModel):
     agent: str = "blue_team"
     scenario_id: str
     decision: BlueDecision
-    actions: List[Union[ActionPayload, Dict[str, Any]]] = Field(default_factory=list)
+    actions: List[Dict[str, Any]] = Field(default_factory=list)
     resource_allocation: Dict[str, Any] = Field(default_factory=dict)
     expected_effects: List[str] = Field(default_factory=list)
     assumptions: List[str] = Field(default_factory=list)
@@ -206,7 +192,7 @@ class RedTeamOutput(BaseModel):
     scenario_id: str
     response_id: str
     assessment: RedAssessment
-    actions: List[Union[ActionPayload, Dict[str, Any]]] = Field(default_factory=list)
+    actions: List[Dict[str, Any]] = Field(default_factory=list)
     counter_actions: List[str] = Field(default_factory=list)
     resource_allocation: Dict[str, Any] = Field(default_factory=dict)
     expected_effects: List[str] = Field(default_factory=list)
@@ -248,22 +234,18 @@ class EnvironmentOutput(BaseModel):
 class SimulationPlan(BaseModel):
     course_of_action_id: Optional[str] = None
     response_id: Optional[str] = None
-    actions: List[Union[ActionPayload, Dict[str, Any]]] = Field(default_factory=list)
+    actions: List[Dict[str, Any]] = Field(default_factory=list)
     resource_allocation: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SimulationInput(BaseModel):
     simulation_id: str
     scenario_id: str
-    current_turn: int = 1
     initial_state: Dict[str, Any]
     environment: Dict[str, Any] = Field(default_factory=dict)
-    resources: Dict[str, Any] = Field(default_factory=dict)
-    intelligence: Dict[str, Any] = Field(default_factory=dict)
     blue_plan: SimulationPlan
     red_plan: SimulationPlan
     rules: Dict[str, List[str]] = Field(default_factory=dict)
-    previous_actions: List[Dict[str, Any]] = Field(default_factory=list)
     time_horizon: str = "24h"
     seed: int = 42
 
@@ -281,12 +263,10 @@ class SimulationTermination(BaseModel):
 class SimulationOutput(BaseModel):
     simulation_id: str
     scenario_id: str
-    turn: int = 1
     status: str = "COMPLETED"
     seed: int = 42
     timeline: List[Dict[str, Any]] = Field(default_factory=list)
     final_state: Dict[str, Any] = Field(default_factory=dict)
-    action_results: List[Dict[str, Any]] = Field(default_factory=list)
     metrics: Dict[str, Any] = Field(default_factory=dict)
     events: List[Dict[str, Any]] = Field(default_factory=list)
     resource_changes: List[Dict[str, Any]] = Field(default_factory=list)

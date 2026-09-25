@@ -21,7 +21,6 @@ dependencies = [
     "openai>=1.30.0",
     "pytest>=8.1.0",
     "pytest-asyncio>=0.23.5",
-    "pytest-timeout>=2.3.1",
 ]
 
 [tool.uv]
@@ -30,5 +29,3 @@ package = false
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-v --timeout=60"
-timeout = 60

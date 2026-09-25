@@ -12,7 +12,6 @@ from backend.schemas.contracts import (
     BlueTeamOutput,
     RedTeamOutput,
     RedAssessment,
-    ActionPayload,
 )
 from backend.llm.wrapper import invoke_structured, is_fallback_allowed
 
@@ -29,52 +28,27 @@ class RedTeamAgent:
         """Deterministic resilient fallback for Red Team plan."""
         r_units = contract.forces.get("red", [])
         unit_id = r_units[0].get("id", "RED-DIV-1") if r_units else "RED-DIV-1"
-        is_subsequent = "." in contract.scenario_id or (contract.parent_scenario_id is not None)
-        blue_intent = blue_coa.decision.intent.lower()
-
-        if is_subsequent or "fortify" in blue_intent or "recon" in blue_intent:
-            red_obj = "Flank Probing & Stand-off Artillery Fire"
-            red_intent = "Exploit river swelling and Blue static redoubt by executing standoff artillery fires while seeking alternate crossing axes."
-            actions = [
-                ActionPayload(
-                    action_id=f"ACT-R{contract.scenario_id.replace('.', '_')}-01",
-                    actor="red",
-                    unit_id=unit_id,
-                    action_type="STRIKE",
-                    target_location="LOC-ALPHA",
-                    resource_requirements={"fuel": 20, "ammo": 25},
-                    expected_effect="Suppress Blue fortified positions and probe defensive perimeter depth."
-                )
-            ]
-        else:
-            red_obj = "Contest River Line and Probe Alpha Defenses"
-            red_intent = "Pin Blue forces at Alpha with forward vanguard while preparing flanking axes."
-            actions = [
-                ActionPayload(
-                    action_id=f"ACT-R{contract.scenario_id.replace('.', '_')}-01",
-                    actor="red",
-                    unit_id=unit_id,
-                    action_type="ADVANCE",
-                    target_location="LOC-BRAVO",
-                    resource_requirements={"fuel": 25, "ammo": 20},
-                    expected_effect="Establish fire control over north bank of LOC-BRAVO and force Blue defensive expenditure."
-                )
-            ]
-
         return RedTeamOutput(
             agent="red_team",
             scenario_id=contract.scenario_id,
             response_id=f"RED-RESP-{contract.scenario_id}",
             assessment=RedAssessment(
                 blue_coa_reference=blue_coa.decision.course_of_action_id,
-                red_objective=red_obj,
-                intent=red_intent
+                red_objective="Contest River Line and Probe Alpha Defenses",
+                intent="Pin Blue forces at Alpha with forward vanguard while preparing flanking axes."
             ),
-            actions=actions,
+            actions=[
+                {
+                    "action_id": "ACT-R01",
+                    "unit_id": unit_id,
+                    "action_type": "ADVANCE",
+                    "target_location": "LOC-BRAVO"
+                }
+            ],
             counter_actions=[
                 "Deploy electronic jamming against Blue forward observation posts"
             ],
-            resource_allocation={"fuel": 25, "ammo": 20},
+            resource_allocation={"fuel": 30, "ammo": 25},
             expected_effects=[
                 "Establish fire control over north bank of LOC-BRAVO",
                 "Force Blue to expend defensive reserves"
