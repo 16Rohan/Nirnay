@@ -1,0 +1,19 @@
+{
+  "agent": "blue_team",
+  "scenario_id": "1.1",
+  "context_profile": "BLUE_CONTEXT",
+  "requirements": [
+    "current_state",
+    "objectives",
+    "constraints",
+    "environment",
+    "blue_state",
+    "red_state",
+    "previous_events",
+    "human_input",
+    "outstanding_issues"
+  ],
+  "max_context_tokens": 8000,
+  "include_history": true,
+  "history_depth": 2
+}

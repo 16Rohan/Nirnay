@@ -1,0 +1,29 @@
+{
+  "transition_id": "TRANS-001",
+  "current_scenario_id": "1.1",
+  "transition_type": "CONTINUE",
+  "reason": "Address emergent ceasefire proposal while maintaining deterrence posture across the river",
+  "evaluation_summary": "Defensive goal achieved at LOC-ALPHA; adversary halted at LOC-BRAVO; mediator proposal requires new scenario.",
+  "emergent_events": [
+    {
+      "event_id": "EVT-001",
+      "type": "diplomatic_development",
+      "description": "Third-party regional mediator offers 24-hour ceasefire talk proposal"
+    }
+  ],
+  "required_changes": [
+    "Incorporate diplomatic mediation rules",
+    "Adjust ROE to conditional non-engagement"
+  ],
+  "new_information": [
+    "UN SitRep confirms pause in heavy artillery fires"
+  ],
+  "human_input": [
+    "Accept mediation framework provided defensive line at LOC-ALPHA is non-negotiable"
+  ],
+  "next_scenario": {
+    "requested": true,
+    "scenario_id": "1.1.1",
+    "parent_scenario_id": "1.1"
+  }
+}

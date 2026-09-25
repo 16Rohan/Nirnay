@@ -1,0 +1,44 @@
+{
+  "agent": "red_team",
+  "scenario_id": "1.1",
+  "response_id": "RED-RESP-001",
+  "assessment": {
+    "blue_coa_reference": "BLUE-COA-001",
+    "red_objective": "Cut supply corridor before Blue fortifications solidify",
+    "intent": "Pin Blue forces at LOC-ALPHA with forward vanguard while maneuvering around river crossing"
+  },
+  "actions": [
+    {
+      "action_id": "ACT-R01",
+      "unit_id": "RED-DIV-1",
+      "action_type": "ADVANCE_AND_ENGAGE",
+      "target_location": "LOC-BRAVO",
+      "intensity": "MODERATE"
+    }
+  ],
+  "counter_actions": [
+    "Deploy electronic counter-measures to disrupt Blue communications"
+  ],
+  "resource_allocation": {
+    "fuel": 35,
+    "ammo": 30,
+    "air_support_sorties": 2
+  },
+  "expected_effects": [
+    "Contest River Crossing Point LOC-BRAVO",
+    "Pressure Blue defensive line"
+  ],
+  "assumptions": [
+    "Blue air reserves will remain withheld as observed"
+  ],
+  "risks": [
+    "Chokepoint vulnerability at river banks in muddy terrain"
+  ],
+  "decision_rationale": [
+    "Exploit terrain delay on Blue wheeled movement to establish crossing"
+  ],
+  "information_gaps": [
+    "Exact density of defensive minefields at Alpha"
+  ],
+  "Dynamic": {}
+}

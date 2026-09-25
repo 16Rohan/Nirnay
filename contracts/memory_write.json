@@ -1,0 +1,19 @@
+{
+  "memory_write_id": "MW-001",
+  "scenario_id": "1.1",
+  "source_agent": "evaluation",
+  "memory_type": "scenario_outcome",
+  "operation": "APPEND",
+  "content": {
+    "events": ["Skirmish at LOC-BRAVO concluded in defensive standoff"],
+    "decisions": ["Blue opted for entrenchment at LOC-ALPHA"],
+    "outcomes": ["Corridor preserved with 6% friendly attrition"],
+    "unresolved_issues": ["Red forces intact north of river line"],
+    "human_interventions": ["Operator accepted conditional mediation talks"]
+  },
+  "provenance": {
+    "source": "evaluation_agent",
+    "simulation_id": "SIM-001"
+  },
+  "timestamp": "2026-09-25T12:35:00Z"
+}
