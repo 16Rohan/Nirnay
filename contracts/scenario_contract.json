@@ -1,0 +1,95 @@
+{
+  "scenario_id": "1.1",
+  "parent_scenario_id": "1",
+  "metadata": {
+    "title": "Operation Swift Resolve",
+    "description": "Strategic escalation management in disputed sector",
+    "created_at": "2026-09-25T12:00:00Z",
+    "time_horizon": "72h",
+    "classification": "DEMO"
+  },
+  "objectives": {
+    "primary": ["Secure Forward Logistics Point Alpha", "Deter adversarial advance"],
+    "secondary": ["Minimize non-combatant infrastructure damage"],
+    "success_conditions": ["FLPA secured", "Zero friendly units encircled"],
+    "failure_conditions": ["Loss of strategic communications corridor"]
+  },
+  "constraints": {
+    "hard": [
+      {
+        "id": "HC-001",
+        "description": "Remain within defined scenario boundary",
+        "enforcement": "BLOCK"
+      }
+    ],
+    "operational": ["Maintain supply route open"],
+    "resource": ["Fuel reserves limited to 72 hours"],
+    "political": ["No kinetic strikes across border buffer"],
+    "time": ["Execution window under 48 hours"],
+    "simulation": ["Max steps: 10"]
+  },
+  "actors": {
+    "blue": {"role": "Defender/Allied Forces", "doctrine": "Active Defense"},
+    "red": {"role": "Adversary", "doctrine": "Rapid Encirclement"},
+    "third_party": [{"role": "Civilian Authority", "neutral": true}]
+  },
+  "forces": {
+    "blue": [
+      {"id": "BLUE-BDE-1", "type": "Mechanized Infantry", "strength": 100, "location": "Sector-4"}
+    ],
+    "red": [
+      {"id": "RED-DIV-1", "type": "Armored Column", "strength": 120, "location": "Sector-1"}
+    ],
+    "third_party": []
+  },
+  "resources": {
+    "blue": {"fuel": 100, "ammo": 100, "air_support_sorties": 4},
+    "red": {"fuel": 150, "ammo": 120, "air_support_sorties": 6},
+    "shared": {"bridge_capacity": 50}
+  },
+  "geography": {
+    "area_of_operations": {"name": "Eastern Valley Corridor", "bounds": [34.0, 74.0, 34.5, 74.5]},
+    "key_locations": [
+      {"id": "LOC-ALPHA", "name": "Forward Logistics Point Alpha", "coordinates": [34.2, 74.2]},
+      {"id": "LOC-BRAVO", "name": "River Crossing Point", "coordinates": [34.3, 74.3]}
+    ],
+    "terrain": {"type": "Valley with River Barrier", "traversability": "Moderate"},
+    "infrastructure": ["Highway-1A", "Hydroelectric Dam"]
+  },
+  "environment": {
+    "weather": {"condition": "Overcast", "precipitation": "Light Rain"},
+    "visibility": {"status": "Moderate", "range_km": 8.0},
+    "terrain_conditions": {"ground": "Muddy in lowlands"},
+    "environmental_factors": ["High river flow rate"]
+  },
+  "initial_state": {
+    "blue": {"status": "Defensive posture", "readiness": "High"},
+    "red": {"status": "Muster at border staging area", "readiness": "High"},
+    "third_party": {"status": "Civilian transit normal"},
+    "civilian": {"status": "Curfew not enacted"}
+  },
+  "rules": {
+    "rules_of_engagement": ["Return fire only if directly targeted or boundary crossed"],
+    "engagement_rules": ["Direct line of sight required for kinetic fires"],
+    "movement_rules": ["Rain reduces wheeled vehicle speed by 30%"],
+    "detection_rules": ["Radar coverage active in northern sector"],
+    "simulation_rules": ["Turn duration: 6 hours"]
+  },
+  "information_state": {
+    "known_facts": ["Red units spotted near Northern Axis"],
+    "uncertainties": ["Exact composition of Red reserve forces"],
+    "assumptions": ["Red main effort is focused on River Crossing Point"],
+    "intelligence_gaps": ["Red electronic warfare capabilities in valley"]
+  },
+  "human_input": {
+    "strategic_guidance": ["Prioritize defensive fortification before counter-attack"],
+    "selected_options": ["Option 1: Defensive hold"],
+    "operator_constraints": ["Do not commit air reserves in first 12 hours"]
+  },
+  "external_information": {
+    "sources": ["UN Observer Mission Report #12"],
+    "relevant_events": ["Border checkpoint closed by local authorities"],
+    "last_updated": "2026-09-25T11:30:00Z"
+  },
+  "Dynamic": {}
+}

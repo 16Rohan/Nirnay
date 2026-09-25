@@ -1,0 +1,30 @@
+{
+  "agent": "environment",
+  "scenario_id": "1.1",
+  "environment_assessment": {
+    "terrain": {"valley_corridor": "passable", "river_banks": "soft_soil"},
+    "weather": {"status": "Intermittent Rain", "cloud_ceiling_ft": 2500},
+    "visibility": {"km": 8.0, "night_factor": 0.8},
+    "mobility": {"tracked": 0.85, "wheeled": 0.65},
+    "infrastructure": {"bridges": "intact", "dam": "monitored"},
+    "environmental_factors": ["High water velocity at River Crossing Point LOC-BRAVO"]
+  },
+  "operational_implications": {
+    "blue": ["Defensive fortifications at Alpha gain terrain cover advantage from hillside slope"],
+    "red": ["Wheeled supply vehicles vulnerable to delays along unpaved secondary trails"],
+    "shared": ["River Crossing LOC-BRAVO is the sole viable heavy crossing without engineering bridges"]
+  },
+  "constraints": [
+    "Heavy air operations constrained if cloud ceiling drops below 2000 ft"
+  ],
+  "opportunities": [
+    "Defenders can channel attackers into natural defiles"
+  ],
+  "uncertainties": [
+    "Risk of flash flooding if rain intensifies over 12 hours"
+  ],
+  "sources": [
+    "Hydro-Meteorological Service Regional Bulletin"
+  ],
+  "Dynamic": {}
+}
