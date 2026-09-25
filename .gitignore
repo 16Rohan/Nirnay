@@ -480,3 +480,4 @@ docker-data/
 *.generated.*
 *.snapshot
 *.dump
+agy/
