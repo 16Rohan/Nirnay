@@ -149,8 +149,22 @@ class ResolvedAgentContext(BaseModel):
 
 
 # ==========================================
-# 4. Blue Team Output Contract
+# 4. Action & Decision Contracts
 # ==========================================
+
+class ActionPayload(BaseModel):
+    action_id: str
+    actor: str = "blue"
+    unit_id: Optional[str] = None
+    action_type: str = "HOLD"
+    target_location: Optional[str] = None
+    resource_requirements: Dict[str, Any] = Field(default_factory=dict)
+    expected_effect: str = ""
+    cost: float = 0.0
+    risk: str = "LOW"
+    prerequisites: List[str] = Field(default_factory=list)
+    duration: str = "6h"
+
 
 class BlueDecision(BaseModel):
     course_of_action_id: str
@@ -165,7 +179,7 @@ class BlueTeamOutput(BaseModel):
     agent: str = "blue_team"
     scenario_id: str
     decision: BlueDecision
-    actions: List[Dict[str, Any]] = Field(default_factory=list)
+    actions: List[Union[ActionPayload, Dict[str, Any]]] = Field(default_factory=list)
     resource_allocation: Dict[str, Any] = Field(default_factory=dict)
     expected_effects: List[str] = Field(default_factory=list)
     assumptions: List[str] = Field(default_factory=list)
@@ -192,7 +206,7 @@ class RedTeamOutput(BaseModel):
     scenario_id: str
     response_id: str
     assessment: RedAssessment
-    actions: List[Dict[str, Any]] = Field(default_factory=list)
+    actions: List[Union[ActionPayload, Dict[str, Any]]] = Field(default_factory=list)
     counter_actions: List[str] = Field(default_factory=list)
     resource_allocation: Dict[str, Any] = Field(default_factory=dict)
     expected_effects: List[str] = Field(default_factory=list)
@@ -234,20 +248,27 @@ class EnvironmentOutput(BaseModel):
 class SimulationPlan(BaseModel):
     course_of_action_id: Optional[str] = None
     response_id: Optional[str] = None
-    actions: List[Dict[str, Any]] = Field(default_factory=list)
+    actions: List[Union[ActionPayload, Dict[str, Any]]] = Field(default_factory=list)
     resource_allocation: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SimulationInput(BaseModel):
     simulation_id: str
     scenario_id: str
+    current_turn: int = 1
     initial_state: Dict[str, Any]
     environment: Dict[str, Any] = Field(default_factory=dict)
+    resources: Dict[str, Any] = Field(default_factory=dict)
+    intelligence: Dict[str, Any] = Field(default_factory=dict)
     blue_plan: SimulationPlan
     red_plan: SimulationPlan
     rules: Dict[str, List[str]] = Field(default_factory=dict)
+    previous_actions: List[Dict[str, Any]] = Field(default_factory=list)
     time_horizon: str = "24h"
     seed: int = 42
+    special_events: List[Dict[str, Any]] = Field(default_factory=list)
+    human_intent: Optional[Dict[str, Any]] = None
+    hard_constraints: List[str] = Field(default_factory=list)
 
 
 # ==========================================
@@ -258,21 +279,27 @@ class SimulationTermination(BaseModel):
     reason: str
     time: str
     condition: str
+    terminal: bool = False
+    winner: Optional[str] = None
+    outcome: Optional[str] = None
 
 
 class SimulationOutput(BaseModel):
     simulation_id: str
     scenario_id: str
+    turn: int = 1
     status: str = "COMPLETED"
     seed: int = 42
     timeline: List[Dict[str, Any]] = Field(default_factory=list)
     final_state: Dict[str, Any] = Field(default_factory=dict)
+    action_results: List[Dict[str, Any]] = Field(default_factory=list)
     metrics: Dict[str, Any] = Field(default_factory=dict)
     events: List[Dict[str, Any]] = Field(default_factory=list)
     resource_changes: List[Dict[str, Any]] = Field(default_factory=list)
     objective_results: List[Dict[str, Any]] = Field(default_factory=list)
     emergent_events: List[Dict[str, Any]] = Field(default_factory=list)
     termination: SimulationTermination
+    terminal: bool = False
 
 
 # ==========================================
@@ -329,13 +356,26 @@ class EvaluationOutput(BaseModel):
 
 
 # ==========================================
-# 10. Human Input Contract
+# 10. Human Input Contract & Command Semantics
 # ==========================================
+
+class StructuredIntent(BaseModel):
+    intent_type: str = "STRATEGIC_GUIDANCE"  # STRATEGIC_GUIDANCE, TACTICAL_DIRECTION, PRIORITY_CHANGE, HARD_CONSTRAINT, TERMINATION_DIRECTIVE, CONDITIONAL_DIRECTIVE, SPECIAL_EVENT_DIRECTIVE
+    objective: str = ""
+    constraints: List[str] = Field(default_factory=list)
+    priority: str = "EXPLICIT_HUMAN_STRATEGIC_INTENT"  # ABSOLUTE, EXPLICIT_HUMAN_STRATEGIC_INTENT, SCENARIO_OBJECTIVES, PREFERENCE, TACTICAL_HEURISTICS
+    execution_requirement: str = "IMMEDIATE"  # IMMEDIATE, CONDITIONAL, NEXT_PHASE
+    special_event: Optional[Dict[str, Any]] = None
+    conflict_detected: bool = False
+    conflict_reason: Optional[str] = None
+    termination_requested: bool = False
+
 
 class OperatorInputPayload(BaseModel):
     text: str = ""
     selected_options: List[str] = Field(default_factory=list)
     constraints: List[str] = Field(default_factory=list)
+    intent: Optional[StructuredIntent] = None
 
 
 class HumanInputContract(BaseModel):
@@ -344,6 +384,7 @@ class HumanInputContract(BaseModel):
     stage: str = "STRATEGY"
     operator_action: str = "GUIDANCE"
     input: OperatorInputPayload
+    structured_intent: Optional[StructuredIntent] = None
     affected_agents: List[str] = Field(default_factory=lambda: ["blue_team", "red_team"])
     terminate_agents: List[str] = Field(default_factory=list)
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())

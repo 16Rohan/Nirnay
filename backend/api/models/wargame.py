@@ -10,6 +10,7 @@ from datetime import datetime
 
 class ScenarioStartRequest(BaseModel):
     preset_id: str = "DEMO-001"
+    session_id: Optional[str] = None
     turn_duration: str = "1m"
     human_guidance: Optional[str] = None
     human_constraints: Optional[str] = None

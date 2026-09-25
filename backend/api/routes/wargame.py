@@ -36,6 +36,12 @@ def _broadcast_turn_log(session_id: str, raw_log: str):
     manager.broadcast_sync(payload, session_id=session_id)
 
 
+def _broadcast_stage_event(session_id: str, evt: Dict[str, Any]):
+    """Callback passed to run_turn to stream structured stage lifecycle events to WebSocket clients."""
+    evt["session_id"] = session_id
+    manager.broadcast_sync(evt, session_id=session_id)
+
+
 @router.get("/presets", response_model=List[ScenarioPreset])
 async def get_presets():
     """Retrieve all available operational scenario presets."""
@@ -48,19 +54,49 @@ async def get_preset_by_id(preset_id: str):
     return get_preset(preset_id)
 
 
+@router.post("/session/init")
+async def init_session(request: ScenarioStartRequest):
+    """
+    Initializes a session in memory and reserves a session_id.
+    Allows frontend to establish WebSocket connection BEFORE launching Turn 1.
+    """
+    try:
+        manager.set_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
+
+    session = session_store.create_session(
+        preset_id=request.preset_id,
+        turn_duration=request.turn_duration,
+        human_guidance=request.human_guidance,
+        human_constraints=request.human_constraints,
+        seed=request.seed,
+        session_id=request.session_id
+    )
+    return {"session_id": session.session_id, "preset_id": session.preset_id}
+
+
 @router.post("/start", response_model=TurnResult)
 async def start_wargame(request: ScenarioStartRequest):
     """
     Initialize a new wargaming session and execute Turn 1.
     Streams agent status updates over WebSocket (/ws/{session_id}).
     """
-    session = session_store.create_session(
-        preset_id=request.preset_id,
-        turn_duration=request.turn_duration,
-        human_guidance=request.human_guidance,
-        human_constraints=request.human_constraints,
-        seed=request.seed
-    )
+    try:
+        manager.set_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
+
+    session = session_store.get_session(request.session_id) if request.session_id else None
+    if not session:
+        session = session_store.create_session(
+            preset_id=request.preset_id,
+            turn_duration=request.turn_duration,
+            human_guidance=request.human_guidance,
+            human_constraints=request.human_constraints,
+            seed=request.seed,
+            session_id=request.session_id
+        )
 
     # Broadcast session initialization
     await manager.broadcast({
@@ -77,9 +113,12 @@ async def start_wargame(request: ScenarioStartRequest):
             session.session_id,
             human_guidance_override=None,
             command_contract=None,
-            log_callback=lambda log: _broadcast_turn_log(session.session_id, log)
+            log_callback=lambda log: _broadcast_turn_log(session.session_id, log),
+            event_callback=lambda evt: _broadcast_stage_event(session.session_id, evt)
         )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         await manager.broadcast({
             "type": "error",
             "session_id": session.session_id,
@@ -102,6 +141,11 @@ async def continue_wargame(session_id: str, request: Optional[TurnContinueReques
     """
     Advance the wargame to the next turn (Turn N+1) without command modifications.
     """
+    try:
+        manager.set_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
+
     session = session_store.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"Wargame session '{session_id}' not found.")
@@ -121,7 +165,8 @@ async def continue_wargame(session_id: str, request: Optional[TurnContinueReques
             session_id,
             human_guidance_override=None,
             command_contract=None,
-            log_callback=lambda log: _broadcast_turn_log(session_id, log)
+            log_callback=lambda log: _broadcast_turn_log(session_id, log),
+            event_callback=lambda evt: _broadcast_stage_event(session_id, evt)
         )
     except Exception as e:
         await manager.broadcast({
@@ -146,6 +191,11 @@ async def submit_human_command(session_id: str, request: HumanCommandRequest):
     """
     Interpret natural-language human command via Orchestrator LLM and execute next turn.
     """
+    try:
+        manager.set_loop(asyncio.get_running_loop())
+    except RuntimeError:
+        pass
+
     session = session_store.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"Wargame session '{session_id}' not found.")
@@ -174,6 +224,17 @@ async def submit_human_command(session_id: str, request: HumanCommandRequest):
         "contract": session.last_interpreted_command
     }, session_id=session_id)
 
+    # Deterministic conflict check: Impossible command
+    if command_contract.structured_intent and command_contract.structured_intent.conflict_detected:
+        conflict_msg = command_contract.structured_intent.conflict_reason or "Directive cannot be executed because it violates physical battlefield constraints."
+        await manager.broadcast({
+            "type": "command_conflict",
+            "session_id": session_id,
+            "command": request.command,
+            "reason": conflict_msg
+        }, session_id=session_id)
+        raise HTTPException(status_code=400, detail=conflict_msg)
+
     # 2. Advance to next turn if requested
     if request.advance_turn:
         try:
@@ -182,7 +243,8 @@ async def submit_human_command(session_id: str, request: HumanCommandRequest):
                 session_id,
                 human_guidance_override=None,
                 command_contract=command_contract,
-                log_callback=lambda log: _broadcast_turn_log(session_id, log)
+                log_callback=lambda log: _broadcast_turn_log(session_id, log),
+                event_callback=lambda evt: _broadcast_stage_event(session_id, evt)
             )
         except Exception as e:
             await manager.broadcast({

@@ -15,6 +15,7 @@ from backend.schemas.contracts import (
     SimulationOutput,
     EvaluationOutput,
     ScenarioTransition,
+    HumanInputContract,
 )
 
 
@@ -34,6 +35,9 @@ class WargameState(BaseModel):
     environment_output: Optional[EnvironmentOutput] = None
     blue_output: Optional[BlueTeamOutput] = None
     red_output: Optional[RedTeamOutput] = None
+    previous_blue_output: Optional[BlueTeamOutput] = None
+    previous_red_output: Optional[RedTeamOutput] = None
+    human_intent_contract: Optional[HumanInputContract] = None
     
     simulation_input: Optional[SimulationInput] = None
     simulation_output: Optional[SimulationOutput] = None

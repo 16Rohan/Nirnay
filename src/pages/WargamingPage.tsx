@@ -101,7 +101,10 @@ const AGENT_PIPELINE_STAGES = [
   { id: 'evaluation', label: 'Evaluation', icon: Activity, tag: '[EVALUATION]' },
 ]
 
+import { useWargameStore } from '../store/wargameStore'
+
 export default function WargamingPage() {
+  const store = useWargameStore()
   // Preset & Configuration State
   const [presets, setPresets] = useState<ScenarioPreset[]>([])
   const [selectedPresetId, setSelectedPresetId] = useState<string>('DEMO-001')
@@ -111,9 +114,10 @@ export default function WargamingPage() {
   const [showConfig, setShowConfig] = useState<boolean>(true)
 
   // Execution State
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [currentTurn, setCurrentTurn] = useState<TurnResult | null>(null)
-  const [turnHistory, setTurnHistory] = useState<TurnResult[]>([])
+  const [sessionId, setSessionId] = useState<string | null>(store.activeSessionId)
+  const [currentTurn, setCurrentTurn] = useState<TurnResult | null>(store.currentTurnResult)
+  const [turnHistory, setTurnHistory] = useState<TurnResult[]>(store.turnHistory)
+
   const [selectedTurnIndex, setSelectedTurnIndex] = useState<number>(0)
   const [isExecuting, setIsExecuting] = useState<boolean>(false)
   const [executionPhase, setExecutionPhase] = useState<string>('idle')
@@ -260,6 +264,7 @@ export default function WargamingPage() {
       setSessionId(turnResult.session_id)
       setCurrentTurn(turnResult)
       setTurnHistory([turnResult])
+      store.setCurrentTurnResult(turnResult)
       setSelectedTurnIndex(0)
       setShowConfig(false)
       setLogs((prev) => [...prev, ...turnResult.step_logs.filter((l) => !prev.includes(l))])
@@ -293,6 +298,7 @@ export default function WargamingPage() {
       const turnResult: TurnResult = await res.json()
       setCurrentTurn(turnResult)
       setTurnHistory((prev) => [...prev, turnResult])
+      store.setCurrentTurnResult(turnResult)
       setSelectedTurnIndex(turnHistory.length)
       setLogs((prev) => [...prev, ...turnResult.step_logs.filter((l) => !prev.includes(l))])
     } catch (err: any) {
@@ -330,6 +336,7 @@ export default function WargamingPage() {
       const turnResult: TurnResult = await res.json()
       setCurrentTurn(turnResult)
       setTurnHistory((prev) => [...prev, turnResult])
+      store.setCurrentTurnResult(turnResult)
       setSelectedTurnIndex(turnHistory.length)
       setCommandText('')
       setLogs((prev) => [...prev, ...turnResult.step_logs.filter((l) => !prev.includes(l))])

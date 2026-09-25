@@ -4,6 +4,7 @@ The central reasoning authority responsible for constructing the Dynamic Scenari
 Does NOT directly execute simulations. Passes contracts to deterministic validation.
 """
 
+import time
 from typing import Optional, Dict, Any
 from rich import print
 
@@ -21,6 +22,9 @@ from backend.schemas.contracts import (
     ExternalInformation,
     ResolvedAgentContext,
     ScenarioTransition,
+    HumanInputContract,
+    OperatorInputPayload,
+    StructuredIntent,
 )
 from backend.llm.wrapper import invoke_structured, is_fallback_allowed
 
@@ -106,7 +110,7 @@ class OrchestratorAgent:
         self,
         scenario_id: str,
         parent_scenario_id: Optional[str],
-        context: ResolvedAgentContext,
+        context: Optional[ResolvedAgentContext] = None,
         transition: Optional[ScenarioTransition] = None,
         human_guidance: Optional[str] = None
     ) -> ScenarioContract:
@@ -124,10 +128,11 @@ class OrchestratorAgent:
             "4. Output MUST adhere strictly to the ScenarioContract schema."
         )
 
+        context_data = context.context if context else {}
         user_prompt = (
             f"Generate Scenario Contract for scenario_id='{scenario_id}' (parent_scenario_id='{parent_scenario_id or 'None'}').\n\n"
             f"CRITICAL: The output JSON MUST include the top-level property \"scenario_id\": \"{scenario_id}\".\n"
-            f"Resolved Context:\n{context.context}\n\n"
+            f"Resolved Context:\n{context_data}\n\n"
             f"Human Guidance: {human_guidance or 'Maintain active defensive posture and test adversarial intent.'}\n"
         )
         if transition:
@@ -151,3 +156,162 @@ class OrchestratorAgent:
                 raise e
             print(f"[bold yellow][AGENT WARNING][/bold yellow] Orchestrator LLM failed: {e}. Using deterministic fallback.")
             return self._deterministic_fallback(scenario_id, parent_scenario_id, human_guidance)
+
+    def _resolve_command_intent(self, command_text: str) -> StructuredIntent:
+        lower = command_text.lower().strip()
+        
+        # 1. Special Event Directive (Catastrophic / Third-Party Nuclear / Mutual Destruction)
+        if any(kw in lower for kw in ["third-party", "third party", "nuclear", "catastrophic event", "mutual destruction", "both destroyed", "both are destroyed"]):
+            return StructuredIntent(
+                intent_type="SPECIAL_EVENT_DIRECTIVE",
+                objective="END_CAMPAIGN",
+                constraints=["THIRD_PARTY_EVENT", "TOTAL_BLUE_DESTRUCTION", "TOTAL_RED_DESTRUCTION", "NO_VICTOR"],
+                priority="ABSOLUTE",
+                execution_requirement="IMMEDIATE",
+                termination_requested=True,
+                special_event={
+                    "event_type": "THIRD_PARTY_CATASTROPHIC_EVENT",
+                    "affected_teams": ["blue", "red"],
+                    "effect": "TOTAL_DESTRUCTION",
+                    "victory_state": "STALEMATE",
+                    "terminal": True
+                }
+            )
+
+        # 2. Impossible / Conflicting Command (e.g. referencing destroyed units)
+        if "destroyed" in lower and any(act in lower for act in ["move", "advance", "attack", "strike", "deploy"]):
+            return StructuredIntent(
+                intent_type="TACTICAL_DIRECTION",
+                objective="INVALID_DIRECTIVE",
+                constraints=[],
+                priority="EXPLICIT_HUMAN_STRATEGIC_INTENT",
+                execution_requirement="IMMEDIATE",
+                conflict_detected=True,
+                conflict_reason="Directive cannot be executed because the specified unit is destroyed."
+            )
+
+        # 3. Termination Directive
+        if any(kw in lower for kw in ["terminate the simulation", "end the simulation", "terminate simulation", "end simulation", "terminate campaign", "end campaign", "abort simulation", "abort campaign", "halt campaign", "conclude campaign", "stop simulation"]):
+            return StructuredIntent(
+                intent_type="TERMINATE_SIMULATION",
+                objective="END_CAMPAIGN",
+                constraints=["IMMEDIATE_TERMINATION"],
+                priority="ABSOLUTE",
+                execution_requirement="IMMEDIATE",
+                termination_requested=True
+            )
+
+        # 4. Hard Constraint
+        if any(kw in lower for kw in ["do not", "never", "must not", "halt offensive", "no kinetic", "avoid direct engagement", "conserve fuel and avoid"]):
+            return StructuredIntent(
+                intent_type="HARD_CONSTRAINT",
+                objective="ENFORCE_CONSTRAINT",
+                constraints=[command_text],
+                priority="ABSOLUTE",
+                execution_requirement="IMMEDIATE"
+            )
+
+        # 5. Conditional Directive
+        if lower.startswith("if ") or " if " in lower or "should red" in lower:
+            return StructuredIntent(
+                intent_type="CONDITIONAL_DIRECTIVE",
+                objective="CONDITIONAL_BRANCH",
+                constraints=[],
+                priority="EXPLICIT_HUMAN_STRATEGIC_INTENT",
+                execution_requirement="CONDITIONAL"
+            )
+
+        # 6. Priority Change
+        if any(kw in lower for kw in ["prioritize", "shift focus", "reorient", "prioritize campaign survival"]):
+            return StructuredIntent(
+                intent_type="PRIORITY_CHANGE",
+                objective="SHIFT_PRIORITIES",
+                constraints=[],
+                priority="EXPLICIT_HUMAN_STRATEGIC_INTENT",
+                execution_requirement="IMMEDIATE"
+            )
+
+        # 7. Tactical Direction
+        if any(kw in lower for kw in ["move", "advance", "send recon", "strike", "withdraw", "abandon", "fall back"]):
+            return StructuredIntent(
+                intent_type="TACTICAL_DIRECTION",
+                objective="TACTICAL_MANEUVER",
+                constraints=[],
+                priority="EXPLICIT_HUMAN_STRATEGIC_INTENT",
+                execution_requirement="IMMEDIATE"
+            )
+
+        # 8. Strategic Guidance
+        return StructuredIntent(
+            intent_type="STRATEGIC_GUIDANCE",
+            objective="MISSION_CONTINUITY",
+            constraints=[],
+            priority="EXPLICIT_HUMAN_STRATEGIC_INTENT",
+            execution_requirement="IMMEDIATE"
+        )
+
+    def interpret_human_command(
+        self,
+        command_text: str,
+        scenario_id: str = "1",
+        current_guidance: Optional[str] = None
+    ) -> HumanInputContract:
+        """
+        Interprets a natural language human command into a structured HumanInputContract.
+        Uses NVIDIA NIM LLM with structured schema extraction and deterministic fallback.
+        """
+        structured_intent = self._resolve_command_intent(command_text)
+
+        system_prompt = (
+            "You are the ORCHESTRATOR AGENT of the NIRNAY Strategic Wargaming & Decision Intelligence Platform.\n"
+            "Your task is to interpret a natural-language command issued by the human operator and convert it into a "
+            "rigorously structured HumanInputContract.\n"
+            "Identify the operator action, selected options, specific constraints, and which agents are affected "
+            "(e.g., 'blue_team', 'red_team', or both).\n"
+            "Adhere strictly to the HumanInputContract schema."
+        )
+
+        user_prompt = (
+            f"Human Operator Directive:\n\"{command_text}\"\n\n"
+            f"Active Scenario ID: {scenario_id}\n"
+            f"Prior Strategic Guidance: {current_guidance or 'None'}\n\n"
+            f"Resolved Intent: {structured_intent.model_dump()}\n\n"
+            f"Extract structured directive with input.text, input.selected_options, input.constraints, "
+            f"and affected_agents."
+        )
+
+        try:
+            contract = invoke_structured(
+                role=self.role,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                schema=HumanInputContract,
+                temperature=0.2
+            )
+            # Ensure safety-critical structured intent is preserved
+            contract.structured_intent = structured_intent
+            contract.input.intent = structured_intent
+            if structured_intent.constraints:
+                for c in structured_intent.constraints:
+                    if c not in contract.input.constraints:
+                        contract.input.constraints.append(c)
+            return contract
+        except Exception as e:
+            if not is_fallback_allowed():
+                raise e
+            print(f"[bold yellow][AGENT WARNING][/bold yellow] Human command LLM interpretation failed: {e}. Using deterministic fallback.")
+            return HumanInputContract(
+                input_id=f"HI-{int(time.time())}",
+                scenario_id=scenario_id,
+                stage="STRATEGY",
+                operator_action="TERMINATION" if structured_intent.intent_type in ("TERMINATE_SIMULATION", "SPECIAL_EVENT_DIRECTIVE") else "COMMAND_OVERRIDE",
+                input=OperatorInputPayload(
+                    text=command_text,
+                    selected_options=[command_text],
+                    constraints=structured_intent.constraints or ([command_text] if structured_intent.intent_type == "HARD_CONSTRAINT" else []),
+                    intent=structured_intent
+                ),
+                structured_intent=structured_intent,
+                affected_agents=["blue_team", "red_team"]
+            )
+
