@@ -1,5 +1,6 @@
 import Navbar from '../components/layout/Navbar'
 import HeroSection from '../components/layout/HeroSection'
+import MissionGallery from '../components/MissionGallery/MissionGallery'
 import FeaturesSection from '../components/layout/FeaturesSection'
 import HowItWorksSection from '../components/layout/HowItWorksSection'
 import CapabilitiesSection from '../components/layout/CapabilitiesSection'
@@ -13,6 +14,7 @@ export default function HomePage() {
     <div className="relative" style={{ background: '#02070D' }}>
       <Navbar />
       <HeroSection />
+      <MissionGallery />
       <FeaturesSection />
       <HowItWorksSection />
       <CapabilitiesSection />

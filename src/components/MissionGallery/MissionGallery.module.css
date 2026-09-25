@@ -1,0 +1,410 @@
+/* Mission Gallery Component Scoped CSS Module */
+
+.gallerySection {
+  position: relative;
+  width: calc(100% - 4rem);
+  max-width: 1480px;
+  height: 82vh;
+  min-height: 580px;
+  margin: 5rem auto;
+  background-color: var(--deep-navy, #06111C);
+  color: var(--text-primary, #F5FAFF);
+  overflow: hidden;
+  user-select: none;
+  font-family: var(--font-body, sans-serif);
+  border-radius: 24px;
+  border: 1px solid var(--border-glass, rgba(100, 190, 255, 0.25));
+  box-shadow: 0 24px 80px rgba(2, 7, 13, 0.9), 0 0 60px rgba(22, 140, 255, 0.15);
+}
+
+.pinnedContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1600px;
+  transform-style: preserve-3d;
+}
+
+/* Tactical HUD Corner Accents */
+.hudCornerTL,
+.hudCornerTR,
+.hudCornerBL,
+.hudCornerBR {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  z-index: 30;
+  pointer-events: none;
+  border-color: var(--cyan-hi, #63E6FF);
+  border-style: solid;
+  opacity: 0.7;
+}
+
+.hudCornerTL {
+  top: 1.5rem;
+  left: 1.5rem;
+  border-width: 2px 0 0 2px;
+}
+
+.hudCornerTR {
+  top: 1.5rem;
+  right: 1.5rem;
+  border-width: 2px 2px 0 0;
+}
+
+.hudCornerBL {
+  bottom: 1.5rem;
+  left: 1.5rem;
+  border-width: 0 0 2px 2px;
+}
+
+.hudCornerBR {
+  bottom: 1.5rem;
+  right: 1.5rem;
+  border-width: 0 2px 2px 0;
+}
+
+/* Tactical Scanline Effect */
+.scanline {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(99, 230, 255, 0.03) 51%,
+    transparent 51%
+  );
+  background-size: 100% 6px;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* 3D Slide Deck */
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transform-style: preserve-3d;
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 1s step-end;
+  pointer-events: none;
+}
+
+.slideActive {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0) rotateY(0deg) rotateZ(0deg) scale(1);
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 1s step-start;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.slidePrev {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(-22%, 0, -400px) rotateY(18deg) rotateZ(-3deg) scale(0.9);
+  z-index: 5;
+}
+
+.slideNext {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(22%, 0, -400px) rotateY(-18deg) rotateZ(3deg) scale(0.9);
+  z-index: 5;
+}
+
+/* Image Container & Ken Burns Effect */
+.imageFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.slideImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1);
+  transition: transform 8s ease-out;
+  will-change: transform;
+}
+
+.slideActive .slideImage {
+  transform: scale(1.08);
+}
+
+/* Scrim Gradient Overlay */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(2, 7, 13, 0.95) 0%,
+    rgba(2, 7, 13, 0.6) 40%,
+    rgba(2, 7, 13, 0.2) 75%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Caption (Bottom-Left) */
+.captionBox {
+  position: absolute;
+  bottom: 8%;
+  left: 6%;
+  max-width: 720px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+  transform: translateY(12px);
+  opacity: 0;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s, opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+
+.slideActive .captionBox {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.titleTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  letter-spacing: 0.25em;
+  color: var(--cyan-hi, #63E6FF);
+  text-transform: uppercase;
+  background: rgba(10, 25, 41, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-glass, rgba(100, 190, 255, 0.25));
+  width: fit-content;
+}
+
+.titleTagDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--cyan-hi, #63E6FF);
+  box-shadow: 0 0 12px var(--cyan-hi, #63E6FF);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.captionTitle {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(2.2rem, 4.5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #F5FAFF);
+  text-shadow: 0 4px 24px rgba(2, 7, 13, 0.8);
+  margin: 0;
+}
+
+.captionSub {
+  font-family: var(--font-body, sans-serif);
+  font-size: clamp(1.05rem, 1.4vw, 1.3rem);
+  font-weight: 400;
+  color: var(--text-secondary, #A6B6C6);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Slide Counter (Top-Right) */
+.counter {
+  position: absolute;
+  top: 6%;
+  right: 5%;
+  z-index: 25;
+  font-family: var(--font-mono, monospace);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--text-primary, #F5FAFF);
+  background: rgba(10, 25, 41, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 0.55rem 1.3rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-glass, rgba(100, 190, 255, 0.25));
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
+}
+
+.counterActive {
+  color: var(--cyan-hi, #63E6FF);
+  text-shadow: 0 0 10px rgba(99, 230, 255, 0.5);
+}
+
+.counterTotal {
+  color: var(--text-muted, #71869A);
+}
+
+/* Progress Indicator (Right Edge) */
+.progressNav {
+  position: absolute;
+  right: 3.5%;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  align-items: center;
+}
+
+.progressItem {
+  position: relative;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.progressDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: rgba(166, 182, 198, 0.35);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progressItemActive .progressDot {
+  width: 14px;
+  height: 14px;
+  background-color: var(--cyan-hi, #63E6FF);
+  box-shadow: 0 0 20px var(--cyan-hi, #63E6FF);
+}
+
+.progressLine {
+  position: absolute;
+  left: 50%;
+  top: -1.4rem;
+  width: 2px;
+  height: 1.4rem;
+  background-color: rgba(166, 182, 198, 0.15);
+  transform: translateX(-50%);
+}
+
+/* Controls (Bottom-Right) */
+.controls {
+  position: absolute;
+  bottom: 8%;
+  right: 5%;
+  z-index: 25;
+  display: flex;
+  gap: 0.9rem;
+}
+
+.navBtn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(10, 25, 41, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass, rgba(100, 190, 255, 0.25));
+  color: var(--text-primary, #F5FAFF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: rgba(22, 140, 255, 0.3);
+  border-color: var(--cyan-hi, #63E6FF);
+  color: var(--cyan-hi, #63E6FF);
+  box-shadow: var(--glow-cyan, 0 0 24px rgba(99, 230, 255, 0.4));
+  transform: scale(1.06);
+}
+
+.navBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Prefers Reduced Motion Fallback */
+@media (prefers-reduced-motion: reduce) {
+  .pinnedContainer {
+    perspective: none;
+    transform-style: flat;
+  }
+
+  .stage,
+  .slide {
+    transform-style: flat;
+  }
+
+  .slide {
+    transform: none !important;
+    transition: opacity 0.5s ease-in-out, visibility 0.5s step-end;
+  }
+
+  .slideActive {
+    transition: opacity 0.5s ease-in-out, visibility 0.5s step-start;
+  }
+
+  .slideImage {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .titleTagDot {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .gallerySection {
+    width: calc(100% - 2rem);
+    height: 70vh;
+    margin: 3rem auto;
+  }
+
+  .captionBox {
+    bottom: 6%;
+    left: 5%;
+    right: 5%;
+  }
+
+  .counter {
+    top: 4%;
+    right: 4%;
+  }
+
+  .controls {
+    bottom: 6%;
+    right: 4%;
+  }
+}
