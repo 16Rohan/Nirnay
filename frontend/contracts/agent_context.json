@@ -1,0 +1,28 @@
+{
+  "context_id": "CTX-001",
+  "agent": "blue_team",
+  "scenario_id": "1.1",
+  "context_profile": "BLUE_CONTEXT",
+  "memory_version": "MEM-001",
+  "resolved_at": "2026-09-25T12:00:00Z",
+  "context": {
+    "current_state": {},
+    "objectives": {},
+    "constraints": {},
+    "environment": {},
+    "blue_state": {},
+    "red_state": {},
+    "previous_events": [],
+    "human_input": {},
+    "outstanding_issues": []
+  },
+  "sources": [
+    {
+      "source_type": "persistent_memory",
+      "scenario_id": "1.1",
+      "reference": "current_state"
+    }
+  ],
+  "omitted": [],
+  "token_estimate": 0
+}
