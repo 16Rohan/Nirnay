@@ -5,11 +5,13 @@ import { Menu, X, ChevronRight, User, Bell } from 'lucide-react'
 
 const NAV_LINKS = [
   { label: 'Overview',   to: '/' },
+  { label: 'Wargaming',  to: '/wargaming' },
   { label: 'Scenarios',  to: '/scenarios' },
   { label: 'Simulation', to: '/simulation' },
   { label: 'Analytics',  to: '/analytics' },
   { label: 'Reports',    to: '/reports' },
 ]
+
 
 export default function Navbar() {
   const [scrolled,   setScrolled]   = useState(false)
@@ -122,7 +124,7 @@ export default function Navbar() {
 
               {/* START SCENARIO > CTA */}
               <NavLink
-                to="/simulation"
+                to="/wargaming"
                 className="hidden md:inline-flex items-center gap-2 px-5 py-2 rounded-md
                            bg-[rgba(4,15,26,0.70)] border border-[rgba(66,199,255,0.65)]
                            text-white font-display text-xs font-semibold tracking-wider uppercase

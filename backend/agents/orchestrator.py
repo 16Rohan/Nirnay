@@ -4,6 +4,7 @@ The central reasoning authority responsible for constructing the Dynamic Scenari
 Does NOT directly execute simulations. Passes contracts to deterministic validation.
 """
 
+import time
 from typing import Optional, Dict, Any
 from rich import print
 
@@ -21,6 +22,8 @@ from backend.schemas.contracts import (
     ExternalInformation,
     ResolvedAgentContext,
     ScenarioTransition,
+    HumanInputContract,
+    OperatorInputPayload,
 )
 from backend.llm.wrapper import invoke_structured, is_fallback_allowed
 
@@ -151,3 +154,61 @@ class OrchestratorAgent:
                 raise e
             print(f"[bold yellow][AGENT WARNING][/bold yellow] Orchestrator LLM failed: {e}. Using deterministic fallback.")
             return self._deterministic_fallback(scenario_id, parent_scenario_id, human_guidance)
+
+    def interpret_human_command(
+        self,
+        command_text: str,
+        scenario_id: str = "1",
+        current_guidance: Optional[str] = None
+    ) -> HumanInputContract:
+        """
+        Interprets a natural language human command into a structured HumanInputContract.
+        Uses NVIDIA NIM LLM with structured schema extraction and deterministic fallback.
+        """
+        system_prompt = (
+            "You are the ORCHESTRATOR AGENT of the NIRNAY Strategic Wargaming & Decision Intelligence Platform.\n"
+            "Your task is to interpret a natural-language command issued by the human operator and convert it into a "
+            "rigorously structured HumanInputContract.\n"
+            "Identify the operator action, selected options, specific constraints, and which agents are affected "
+            "(e.g., 'blue_team', 'red_team', or both).\n"
+            "Adhere strictly to the HumanInputContract schema."
+        )
+
+        user_prompt = (
+            f"Human Operator Directive:\n\"{command_text}\"\n\n"
+            f"Active Scenario ID: {scenario_id}\n"
+            f"Prior Strategic Guidance: {current_guidance or 'None'}\n\n"
+            f"Extract structured directive with input.text, input.selected_options, input.constraints, "
+            f"and affected_agents."
+        )
+
+        try:
+            return invoke_structured(
+                role=self.role,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                schema=HumanInputContract,
+                temperature=0.2
+            )
+        except Exception as e:
+            if not is_fallback_allowed():
+                raise e
+            print(f"[bold yellow][AGENT WARNING][/bold yellow] Human command LLM interpretation failed: {e}. Using deterministic fallback.")
+            constraints = []
+            lower_text = command_text.lower()
+            if any(kw in lower_text for kw in ["do not", "no ", "must remain", "avoid", "hold", "never", "halt"]):
+                constraints.append(command_text)
+
+            return HumanInputContract(
+                input_id=f"HI-{int(time.time())}",
+                scenario_id=scenario_id,
+                stage="STRATEGY",
+                operator_action="COMMAND_OVERRIDE",
+                input=OperatorInputPayload(
+                    text=command_text,
+                    selected_options=[command_text],
+                    constraints=constraints
+                ),
+                affected_agents=["blue_team", "red_team"]
+            )
+

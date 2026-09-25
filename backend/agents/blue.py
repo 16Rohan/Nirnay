@@ -12,6 +12,7 @@ from backend.schemas.contracts import (
     EnvironmentOutput,
     BlueTeamOutput,
     BlueDecision,
+    ActionPayload,
 )
 from backend.llm.wrapper import invoke_structured, is_fallback_allowed
 
@@ -28,24 +29,48 @@ class BlueTeamAgent:
         """Deterministic resilient fallback for Blue Team plan."""
         b_units = contract.forces.get("blue", [])
         unit_id = b_units[0].get("id", "BLUE-BDE-1") if b_units else "BLUE-BDE-1"
+        is_subsequent = "." in contract.scenario_id or (contract.parent_scenario_id is not None)
+
+        if is_subsequent:
+            coa_name = "Active Defense & Reconnaissance Screen"
+            intent = "Maintain established fortification at Alpha while deploying reconnaissance to monitor adversary flanking routes."
+            actions = [
+                ActionPayload(
+                    action_id=f"ACT-B{contract.scenario_id.replace('.', '_')}-01",
+                    actor="blue",
+                    unit_id=unit_id,
+                    action_type="RECON",
+                    target_location="LOC-BRAVO",
+                    resource_requirements={"fuel": 15, "ammo": 10},
+                    expected_effect="Detect adversary bridging and artillery repositioning north of LOC-BRAVO."
+                )
+            ]
+        else:
+            coa_name = "Defensive Redoubt & Sector Anchor"
+            intent = "Entrench forces at Forward Logistics Point Alpha and deny river crossing breakout."
+            actions = [
+                ActionPayload(
+                    action_id=f"ACT-B{contract.scenario_id.replace('.', '_')}-01",
+                    actor="blue",
+                    unit_id=unit_id,
+                    action_type="FORTIFY",
+                    target_location="LOC-ALPHA",
+                    resource_requirements={"fuel": 15, "ammo": 10},
+                    expected_effect="Preserves 90%+ combat readiness at Alpha and establishes 1.5x defense multiplier."
+                )
+            ]
+
         return BlueTeamOutput(
             agent="blue_team",
             scenario_id=contract.scenario_id,
             decision=BlueDecision(
                 course_of_action_id=f"BLUE-COA-{contract.scenario_id}",
-                name="Defensive Redoubt & Sector Anchor",
-                intent="Entrench forces at Forward Logistics Point Alpha and deny river crossing breakout.",
+                name=coa_name,
+                intent=intent,
                 priority="HIGH"
             ),
-            actions=[
-                {
-                    "action_id": "ACT-B01",
-                    "unit_id": unit_id,
-                    "action_type": "FORTIFY",
-                    "target_location": "LOC-ALPHA"
-                }
-            ],
-            resource_allocation={"fuel": 20, "ammo": 15},
+            actions=actions,
+            resource_allocation={"fuel": 15, "ammo": 10},
             expected_effects=[
                 "Preserves 90%+ combat readiness at Alpha",
                 "Prevents adversary from establishing uncontested bridgehead"

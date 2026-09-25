@@ -55,8 +55,26 @@ red_agent = RedTeamAgent()
 evaluation_agent = EvaluationAgent()
 
 
+_log_listeners = []
+
+
+def add_log_listener(listener):
+    if listener not in _log_listeners:
+        _log_listeners.append(listener)
+
+
+def remove_log_listener(listener):
+    if listener in _log_listeners:
+        _log_listeners.remove(listener)
+
+
 def _log(msg: str):
     rprint(msg)
+    for listener in list(_log_listeners):
+        try:
+            listener(msg)
+        except Exception:
+            pass
 
 
 def node_load_context(state: WargameState) -> Dict[str, Any]:
@@ -86,6 +104,18 @@ def node_orchestrator(state: WargameState) -> Dict[str, Any]:
         transition=state.scenario_transition,
         human_guidance=state.human_guidance
     )
+
+    # Invariant: If previous turn simulation output exists, ground truth forces & resources strictly persist
+    if state.previous_simulation_output and state.previous_simulation_output.final_state:
+        prev_final = state.previous_simulation_output.final_state
+        if "blue" in prev_final and prev_final["blue"]:
+            contract.forces["blue"] = list(prev_final["blue"].values())
+        if "red" in prev_final and prev_final["red"]:
+            contract.forces["red"] = list(prev_final["red"].values())
+        if "resources" in prev_final and prev_final["resources"]:
+            contract.resources["blue"] = dict(prev_final["resources"].get("blue", contract.resources.get("blue", {})))
+            contract.resources["red"] = dict(prev_final["resources"].get("red", contract.resources.get("red", {})))
+
     elapsed = time.time() - t0
     source = "[yellow](Fallback)[/yellow]" if contract.metadata.classification == "FALLBACK" else "[green](Live NIM LLM)[/green]"
     log = f"[ORCHESTRATOR] Generated Dynamic Scenario Contract {contract.scenario_id} in {elapsed:.2f}s {source}: '{contract.metadata.title}'"
@@ -157,7 +187,7 @@ def node_red_team(state: WargameState) -> Dict[str, Any]:
 
 
 def node_simulation(state: WargameState) -> Dict[str, Any]:
-    _log(f"[bold green3]>> [SIMULATOR][/bold green3] Executing deterministic rule-based simulation engine (Seed: 42)...")
+    _log(f"[bold green3]>> [SIMULATOR][/bold green3] Executing deterministic rule-based simulation engine (Seed: 42, Turn: {state.iteration_count})...")
     contract = state.scenario_contract
     initial_entities_blue = {
         u.get("id", f"BLUE-UNIT-{i+1}"): u
@@ -171,8 +201,10 @@ def node_simulation(state: WargameState) -> Dict[str, Any]:
     sim_input = SimulationInput(
         simulation_id=f"SIM-{state.scenario_id}",
         scenario_id=state.scenario_id,
+        current_turn=state.iteration_count,
         initial_state={"blue": initial_entities_blue, "red": initial_entities_red},
         environment=state.environment_output.environment_assessment,
+        resources=contract.resources,
         blue_plan=SimulationPlan(
             course_of_action_id=state.blue_output.decision.course_of_action_id,
             actions=state.blue_output.actions,
@@ -184,6 +216,7 @@ def node_simulation(state: WargameState) -> Dict[str, Any]:
             resource_allocation=state.red_output.resource_allocation
         ),
         rules={"rules": contract.rules.simulation_rules},
+        previous_actions=state.previous_simulation_output.action_results if state.previous_simulation_output else [],
         time_horizon=contract.metadata.time_horizon,
         seed=42
     )
@@ -191,7 +224,7 @@ def node_simulation(state: WargameState) -> Dict[str, Any]:
     sim_out = simulator.run(sim_input)
     b_loss = sim_out.metrics.get("blue", {}).get("losses_percentage", 0.0)
     r_loss = sim_out.metrics.get("red", {}).get("losses_percentage", 0.0)
-    log = f"[SIMULATOR] Deterministic run finished: Blue attrition: {b_loss}%, Red attrition: {r_loss}%, Condition: {sim_out.termination.condition}"
+    log = f"[SIMULATOR] Deterministic run finished (Turn {state.iteration_count}): Blue attrition: {b_loss}%, Red attrition: {r_loss}%, Condition: {sim_out.termination.condition}"
     _log(f"   [SIMULATOR] Result calculated: Blue attrition {b_loss}%, Red attrition {r_loss}%. Condition: {sim_out.termination.condition}")
     return {"simulation_input": sim_input, "simulation_output": sim_out, "step_logs": state.step_logs + [log]}
 
@@ -274,6 +307,7 @@ def node_prepare_next_iteration(state: WargameState) -> Dict[str, Any]:
         "scenario_id": next_id,
         "parent_scenario_id": parent_id,
         "iteration_count": state.iteration_count + 1,
+        "previous_simulation_output": state.simulation_output,
         "step_logs": state.step_logs + [log]
     }
 
@@ -329,9 +363,10 @@ def node_generate_report(state: WargameState) -> Dict[str, Any]:
 
 
 def router_check_continuation(state: WargameState) -> Literal["continue_loop", "conclude"]:
-    if state.concluded or state.iteration_count >= state.max_iterations:
+    if state.turn_based or state.concluded or state.iteration_count >= state.max_iterations:
         return "conclude"
     return "continue_loop"
+
 
 
 def create_wargame_graph():
