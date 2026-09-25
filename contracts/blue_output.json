@@ -1,0 +1,41 @@
+{
+  "agent": "blue_team",
+  "scenario_id": "1.1",
+  "decision": {
+    "course_of_action_id": "BLUE-COA-001",
+    "name": "Forward Sector Defense & Fortification",
+    "intent": "Deny adversary control over Highway-1A bridgehead and fortify Logistics Point Alpha",
+    "priority": "HIGH"
+  },
+  "actions": [
+    {
+      "action_id": "ACT-B01",
+      "unit_id": "BLUE-BDE-1",
+      "action_type": "FORTIFY",
+      "target_location": "LOC-ALPHA",
+      "rules_of_engagement": "DEFENSIVE"
+    }
+  ],
+  "resource_allocation": {
+    "fuel": 20,
+    "ammo": 15,
+    "air_support_sorties": 0
+  },
+  "expected_effects": [
+    "Logistics Point Alpha defense readiness increased to 90%",
+    "Corridor access preserved"
+  ],
+  "assumptions": [
+    "Red column will attempt crossing along Highway-1A"
+  ],
+  "risks": [
+    "Vulnerability to flank maneuvering along southern river bend"
+  ],
+  "decision_rationale": [
+    "Holding Forward Logistics Point Alpha satisfies primary mission condition while respecting operator guidance"
+  ],
+  "information_gaps": [
+    "Presence of Red artillery reserves"
+  ],
+  "Dynamic": {}
+}

@@ -1,0 +1,484 @@
+# ============================================================
+# NIRNAY / WARGAMING-AI
+# Global Repository .gitignore
+# ============================================================
+
+
+# ============================================================
+# PYTHON — Backend + AI Agents
+# ============================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Python caches
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.pyre/
+.ruff_cache/
+.pyright/
+.hypothesis/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+
+# ============================================================
+# ENVIRONMENT VARIABLES / API KEYS / SECRETS
+# ============================================================
+
+# Generic environment files
+.env
+.env.*
+!.env.example
+
+# Backend secrets
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# AI / Agent secrets
+backend/agents/.env
+backend/agents/.env.*
+!backend/agents/.env.example
+
+# Frontend secrets
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Frontend framework environment files
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Local configuration files that may contain secrets
+secrets/
+secret/
+credentials/
+credentials.json
+secrets.json
+config.local.*
+settings.local.*
+
+# Private keys / certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# SSH keys accidentally placed in repository
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Cloud/provider credentials
+.aws/
+.gcloud/
+.azure/
+.firebase/
+
+
+# ============================================================
+# FRONTEND — Node / React / Vite / Next.js
+# ============================================================
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+.next/
+out/
+
+# Framework caches
+.cache/
+.parcel-cache/
+.turbo/
+.vercel/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Package manager caches
+.npm/
+.yarn/
+.pnpm-store/
+
+# Local frontend configuration
+*.local
+
+
+# ============================================================
+# API KEYS / CLIENT-SIDE SECRET FILES
+# ============================================================
+
+# Common local API configuration files
+api_keys.json
+api-key.json
+apikey.json
+keys.json
+secrets.json
+credentials.json
+
+# Local AI configuration
+llm_config.local.*
+agent_config.local.*
+ai_config.local.*
+
+# Firebase / Google
+firebase-debug.log
+.firebase/
+google-services.json
+GoogleService-Info.plist
+
+# IMPORTANT:
+# NEXT_PUBLIC_* and VITE_* variables are normally exposed
+# to the browser. NEVER put private API keys in these variables.
+
+
+# ============================================================
+# NIRNAY — RUNTIME DATA
+# ============================================================
+
+# Runtime logs
+*.log
+logs/
+
+# Runtime-generated strategic memory
+memory/
+data/memory/
+
+# Runtime-generated simulation results
+data/simulation_results/
+
+# Runtime-generated reports
+data/reports/
+
+# Runtime-generated scenarios
+data/generated/
+
+# Temporary runtime state
+data/runtime/
+data/tmp/
+tmp/
+temp/
+
+# Runtime exports
+exports/
+generated/
+
+
+# ============================================================
+# DATABASE / LOCAL STORAGE
+# ============================================================
+
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+
+# Local database directories
+database/local/
+data/database/
+db/
+
+
+# ============================================================
+# AI / ML GENERATED FILES
+# ============================================================
+
+# Model checkpoints
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# ML experiment outputs
+runs/
+wandb/
+mlruns/
+checkpoints/
+
+# Local Hugging Face cache
+.cache/huggingface/
+huggingface_cache/
+
+# Sentence-transformer / model caches
+.cache/torch/
+.cache/transformers/
+
+
+# ============================================================
+# AGENT / LANGGRAPH RUNTIME FILES
+# ============================================================
+
+# Agent execution logs
+agent_logs/
+agent_runs/
+agent_runtime/
+agent_state/
+
+# LangGraph / local checkpoint data
+langgraph_checkpoints/
+checkpoints/
+
+# Agent debug/output dumps
+agent_outputs/
+agent_debug/
+*.agent.log
+
+
+# ============================================================
+# GENERATED SIMULATION / WARGAMING ARTIFACTS
+# ============================================================
+
+# Generated simulation files
+simulation_outputs/
+simulation_runs/
+simulation_logs/
+
+# Generated Monte Carlo results
+monte_carlo/
+monte_carlo_results/
+
+# Generated what-if branches
+whatif/
+what_if/
+branches/
+
+# Temporary scenario snapshots
+scenario_snapshots/
+scenario_dumps/
+
+
+# ============================================================
+# WEBSOCKET / RUNTIME ARTIFACTS
+# ============================================================
+
+*.sock
+*.pid
+*.pid.lock
+
+
+# ============================================================
+# TEST ARTIFACTS
+# ============================================================
+
+*.test
+test-results/
+test-results.xml
+junit.xml
+
+# Keep tests themselves tracked.
+# Only generated test artifacts are ignored.
+
+
+# ============================================================
+# IDE — VS CODE
+# ============================================================
+
+.vscode/*
+
+# Keep useful shared project settings
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# If settings.json contains local paths/secrets,
+# remove the exception above and ignore it.
+
+# VS Code history
+.history/
+
+
+# ============================================================
+# IDE — JETBRAINS
+# ============================================================
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+
+# ============================================================
+# OTHER EDITORS
+# ============================================================
+
+*.swp
+*.swo
+*~
+.#*
+*.orig
+
+
+# ============================================================
+# OS FILES
+# ============================================================
+
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+
+# ============================================================
+# TEMPORARY / BACKUP FILES
+# ============================================================
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*.swp
+
+
+# ============================================================
+# DOCUMENT / EXPORT TEMPORARIES
+# ============================================================
+
+*.pdf.tmp
+*.docx.tmp
+*.xlsx.tmp
+*.pptx.tmp
+
+
+# ============================================================
+# LOCAL DEVELOPMENT / DEBUG
+# ============================================================
+
+debug/
+debug_output/
+debug_logs/
+local/
+local_data/
+
+
+# ============================================================
+# OS / TOOL SPECIFIC
+# ============================================================
+
+.DS_Store
+Thumbs.db
+
+# Windows
+*.lnk
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+
+# ============================================================
+# DO NOT COMMIT LOCAL API TEST OUTPUTS
+# ============================================================
+
+postman/
+postman_local/
+api_test_output/
+response_dumps/
+
+
+# ============================================================
+# LOCAL CERTIFICATES / TLS
+# ============================================================
+
+certs/
+certificates/
+ssl/
+tls/
+
+
+# ============================================================
+# LOCAL DEPLOYMENT / CLOUD CONFIG
+# ============================================================
+
+.firebase/
+.vercel/
+.netlify/
+.aws/
+.azure/
+.gcloud/
+
+# Terraform local state, if ever used
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+
+# ============================================================
+# LOCAL DOCKER ARTIFACTS
+# ============================================================
+
+# NIRNAY does NOT use Docker, but prevent accidental artifacts
+# from entering the repository if someone experiments locally.
+
+.docker/
+docker-data/
+
+
+# ============================================================
+# GENERATED ARCHITECTURE / TOOL OUTPUT
+# ============================================================
+
+*.generated
+*.generated.*
+*.snapshot
+*.dump
+agy/
+

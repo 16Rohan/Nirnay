@@ -1,0 +1,28 @@
+{
+  "source_id": "SRC-001",
+  "source": {
+    "publisher": "United Nations Department of Peace Operations",
+    "publication": "Field Observer SitRep #14",
+    "source_type": "official",
+    "authority_tier": 1,
+    "url": "https://un.org/sitrep-14",
+    "published_at": "2026-09-25T11:00:00Z",
+    "retrieved_at": "2026-09-25T11:45:00Z"
+  },
+  "claim": {
+    "claim_id": "CLM-001",
+    "statement": "Both belligerents have paused heavy artillery fires across the river as of 11:00 UTC",
+    "claim_type": "reported_event",
+    "status": "CONFIRMED",
+    "confidence": 0.94
+  },
+  "corroboration": {
+    "independent_sources": ["Reuters Regional Desk"],
+    "corroborated": true
+  },
+  "relevance": {
+    "scenario_id": "1.1",
+    "relevance": "Directly impacts Rules of Engagement and ceasefire negotiations in next scenario",
+    "affected_fields": ["rules.rules_of_engagement", "information_state.known_facts"]
+  }
+}

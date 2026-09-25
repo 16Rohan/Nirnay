@@ -1,0 +1,49 @@
+{
+  "simulation_id": "SIM-001",
+  "scenario_id": "1.1",
+  "status": "COMPLETED",
+  "seed": 42,
+  "timeline": [
+    {"tick": 1, "description": "Blue unit BLUE-BDE-1 initiated defensive posture at LOC-ALPHA"},
+    {"tick": 2, "description": "Red column RED-DIV-1 advanced to northern river bank LOC-BRAVO"},
+    {"tick": 3, "description": "Skirmish engagement at LOC-BRAVO bridgehead"}
+  ],
+  "final_state": {
+    "blue": {
+      "BLUE-BDE-1": {"strength": 94, "status": "Entrenched", "location": "LOC-ALPHA"}
+    },
+    "red": {
+      "RED-DIV-1": {"strength": 108, "status": "Halted at River Crossing", "location": "LOC-BRAVO"}
+    },
+    "third_party": {},
+    "civilian": {}
+  },
+  "metrics": {
+    "blue": {"losses_percentage": 6.0, "readiness": "High"},
+    "red": {"losses_percentage": 10.0, "readiness": "Moderate"},
+    "shared": {"bridge_damage_percentage": 15.0}
+  },
+  "events": [
+    {"event_id": "SIM-EV-01", "name": "Bridgehead Skirmish", "resolved": true}
+  ],
+  "resource_changes": [
+    {"actor": "blue", "consumed": {"fuel": 20, "ammo": 15}},
+    {"actor": "red", "consumed": {"fuel": 35, "ammo": 30}}
+  ],
+  "objective_results": [
+    {"objective": "Secure Forward Logistics Point Alpha", "status": "ACHIEVED"},
+    {"objective": "Deter adversarial advance", "status": "PARTIALLY_ACHIEVED"}
+  ],
+  "emergent_events": [
+    {
+      "event_id": "EVT-SIM-01",
+      "type": "weather_shift",
+      "description": "Rising river waters increase crossing difficulty by 40%"
+    }
+  ],
+  "termination": {
+    "reason": "Max time horizon reached",
+    "time": "24h",
+    "condition": "Stalemate at River Line"
+  }
+}
