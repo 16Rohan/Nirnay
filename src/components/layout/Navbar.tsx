@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ChevronRight, User, Bell } from 'lucide-react'
 
 const NAV_LINKS = [
-  { label: 'Overview',   to: '/' },
-  { label: 'Scenarios',  to: '/scenarios' },
-  { label: 'Simulation', to: '/simulation' },
-  { label: 'Analytics',  to: '/analytics' },
-  { label: 'Reports',    to: '/reports' },
+  { label: 'Overview',        to: '/' },
+  { label: 'Scenarios',       to: '/scenarios' },
+  { label: 'Tactical Arena',  to: '/simulation' },
+  { label: 'Wargame',         to: '/wargaming' },
+  { label: 'Analytics',       to: '/analytics' },
+  { label: 'Reports',         to: '/reports' },
 ]
 
 export default function Navbar() {

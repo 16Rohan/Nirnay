@@ -10,10 +10,12 @@ from datetime import datetime
 
 class ScenarioStartRequest(BaseModel):
     preset_id: str = "DEMO-001"
+    session_id: Optional[str] = None
     turn_duration: str = "1m"
     human_guidance: Optional[str] = None
     human_constraints: Optional[str] = None
     seed: int = 42
+    max_turns: int = 5
 
 
 class HumanCommandRequest(BaseModel):
@@ -72,6 +74,7 @@ class TurnResult(BaseModel):
     step_logs: List[str] = Field(default_factory=list)
     strategic_report: Optional[str] = None
     interpreted_command: Optional[Dict[str, Any]] = None
+    simulation_output: Optional[Dict[str, Any]] = None
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 
@@ -84,4 +87,5 @@ class SessionOverview(BaseModel):
     turn_duration: str
     created_at: str
     total_turns: int
+    max_turns: int = 5
     turns: List[TurnResult] = Field(default_factory=list)

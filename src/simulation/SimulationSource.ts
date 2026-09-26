@@ -1,4 +1,4 @@
-import type { SimulationState } from '../../../contracts/simulation_3d'
+import type { SimulationState } from '@/types/simulation_3d'
 
 /** Stable boundary for the renderer: implementations publish snapshots, never Three.js objects. */
 export interface SimulationSource {

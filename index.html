@@ -8,17 +8,27 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>NIRNAY — Agentic AI Decision Support</title>
 
-    <!-- Google Fonts: Space Grotesk (headings) + Inter (body) + JetBrains Mono (data) -->
+    <!-- Google Fonts: Space Grotesk (headings) + Inter (body) + JetBrains Mono (data) with font-display: swap -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
 
-    <!-- Prevent FOUC -->
+    <!-- Prevent FOUC & Immediate dark canvas layout -->
     <style>
-      html, body { background-color: #02070D; margin: 0; padding: 0; }
+      html, body { background-color: #02070D; margin: 0; padding: 0; color-scheme: dark; }
     </style>
   </head>
   <body>

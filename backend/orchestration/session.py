@@ -9,7 +9,13 @@ from typing import Dict, Optional, List, Any, Callable
 from datetime import datetime
 
 from backend.orchestration.state import WargameState
-from backend.orchestration.graph import create_wargame_graph, add_log_listener, remove_log_listener
+from backend.orchestration.graph import (
+    create_wargame_graph,
+    add_log_listener,
+    remove_log_listener,
+    add_event_listener,
+    remove_event_listener,
+)
 from backend.config.presets import get_preset
 from backend.schemas.contracts import HumanInputContract
 from backend.api.models.wargame import (
@@ -29,7 +35,8 @@ class WargameSession:
         turn_duration: str,
         human_guidance: str,
         human_constraints: str,
-        seed: int = 42
+        seed: int = 42,
+        max_turns: int = 5
     ):
         self.session_id = session_id
         self.preset_id = preset_id
@@ -37,6 +44,7 @@ class WargameSession:
         self.human_guidance = human_guidance
         self.human_constraints = human_constraints
         self.seed = seed
+        self.max_turns = max_turns
         self.created_at = datetime.utcnow().isoformat()
         
         self.current_turn = 0
@@ -63,22 +71,25 @@ class WargameSessionStore:
         turn_duration: str = "1m",
         human_guidance: Optional[str] = None,
         human_constraints: Optional[str] = None,
-        seed: int = 42
+        seed: int = 42,
+        max_turns: int = 5,
+        session_id: Optional[str] = None
     ) -> WargameSession:
         preset = get_preset(preset_id)
-        session_id = f"WARGAME-{uuid.uuid4().hex[:8].upper()}"
+        final_session_id = session_id or f"WARGAME-{uuid.uuid4().hex[:8].upper()}"
         guidance = human_guidance or preset.default_objective
         constraints = human_constraints or preset.default_constraints
 
         session = WargameSession(
-            session_id=session_id,
+            session_id=final_session_id,
             preset_id=preset_id,
             turn_duration=turn_duration,
             human_guidance=guidance,
             human_constraints=constraints,
-            seed=seed
+            seed=seed,
+            max_turns=max_turns
         )
-        self._sessions[session_id] = session
+        self._sessions[final_session_id] = session
         return session
 
     def get_session(self, session_id: str) -> Optional[WargameSession]:
@@ -97,6 +108,7 @@ class WargameSessionStore:
                 turn_duration=s.turn_duration,
                 created_at=s.created_at,
                 total_turns=len(s.turns),
+                max_turns=s.max_turns,
                 turns=s.turns
             ))
         return overviews
@@ -106,7 +118,8 @@ class WargameSessionStore:
         session_id: str,
         human_guidance_override: Optional[str] = None,
         command_contract: Optional[HumanInputContract] = None,
-        log_callback: Optional[Callable[[str], None]] = None
+        log_callback: Optional[Callable[[str], None]] = None,
+        event_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> TurnResult:
         """
         Executes exactly ONE turn of the wargame pipeline.
@@ -116,11 +129,18 @@ class WargameSessionStore:
         if not session:
             raise ValueError(f"Session {session_id} not found.")
 
+        if session.status == "concluded":
+            raise ValueError(f"Wargame session '{session_id}' has already concluded. No scenario resurrection permitted.")
+
         session.status = "running"
         turn_number = session.current_turn + 1
         
         # Determine scenario ID and lineage
         if session.last_state and session.last_state.scenario_transition:
+            next_req = session.last_state.scenario_transition.next_scenario.requested
+            if not next_req or session.last_state.scenario_transition.next_scenario.scenario_id == "NONE":
+                session.status = "concluded"
+                raise ValueError("Campaign has reached a terminal conclusion; no next scenario available.")
             scenario_id = session.last_state.scenario_transition.next_scenario.scenario_id
             parent_id = session.last_state.scenario_id
         else:
@@ -146,10 +166,14 @@ class WargameSessionStore:
             scenario_id=scenario_id,
             parent_scenario_id=parent_id,
             iteration_count=turn_number,
-            max_iterations=10,  # Multi-turn campaign horizon
+            max_iterations=session.max_turns,  # Multi-turn campaign horizon
             human_guidance=guidance,
             turn_based=True,
+            seed=session.seed,
             previous_simulation_output=prev_sim_output,
+            previous_blue_output=session.last_state.blue_output if session.last_state else None,
+            previous_red_output=session.last_state.red_output if session.last_state else None,
+            human_intent_contract=command_contract,
             scenario_transition=prev_transition,
             concluded=False
         )
@@ -166,7 +190,15 @@ class WargameSessionStore:
                 except Exception:
                     pass
 
+        def stage_listener(evt: Dict[str, Any]):
+            if event_callback:
+                try:
+                    event_callback(evt)
+                except Exception:
+                    pass
+
         add_log_listener(listener)
+        add_event_listener(stage_listener)
         final_state: Optional[WargameState] = None
 
         try:
@@ -174,6 +206,7 @@ class WargameSessionStore:
                 final_state = WargameState.model_validate(step_output)
         finally:
             remove_log_listener(listener)
+            remove_event_listener(stage_listener)
 
         if not final_state:
             session.status = "error"
@@ -181,7 +214,21 @@ class WargameSessionStore:
 
         session.last_state = final_state
         session.current_turn = turn_number
-        is_concluded = final_state.concluded or turn_number >= 5
+        
+        # Check if terminal condition occurred
+        sim = final_state.simulation_output
+        is_terminal = False
+        if sim:
+            if sim.terminal or (sim.termination and sim.termination.terminal) or sim.status == "TERMINATED":
+                is_terminal = True
+            elif sim.metrics:
+                b_loss = sim.metrics.get("blue", {}).get("losses_percentage", 0.0)
+                r_loss = sim.metrics.get("red", {}).get("losses_percentage", 0.0)
+                if b_loss >= 100.0 or r_loss >= 100.0:
+                    is_terminal = True
+
+        # Session concludes after max_turns operational turns or terminal outcome
+        is_concluded = is_terminal or (turn_number >= session.max_turns)
         session.status = "concluded" if is_concluded else "awaiting_decision"
 
 
@@ -237,7 +284,8 @@ class WargameSessionStore:
             decisions=decisions,
             step_logs=final_state.step_logs,
             strategic_report=final_state.strategic_report,
-            interpreted_command=interpreted_dict
+            interpreted_command=interpreted_dict,
+            simulation_output=sim.model_dump() if sim else None
         )
 
         session.turns.append(turn_result)

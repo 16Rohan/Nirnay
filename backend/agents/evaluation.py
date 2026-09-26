@@ -33,8 +33,15 @@ class EvaluationAgent:
         max_iterations: int
     ) -> EvaluationOutput:
         """Deterministic resilient fallback for Evaluation assessment."""
-        concluded = iteration_count >= max_iterations
+        is_sim_terminal = bool(sim_output.terminal or (sim_output.termination and sim_output.termination.terminal) or sim_output.status == "TERMINATED")
+        concluded = is_sim_terminal or (iteration_count >= max_iterations)
         next_id = f"{contract.scenario_id}.1" if "." not in contract.scenario_id else f"{contract.scenario_id[:-1]}{int(contract.scenario_id[-1])+1}"
+
+        conclusion_text = (
+            f"Scenario {contract.scenario_id} reached terminal state: {sim_output.termination.condition} ({sim_output.termination.reason})."
+            if is_sim_terminal else
+            f"Scenario {contract.scenario_id} demonstrated that Blue's fortified redoubt at LOC-ALPHA successfully deterred the adversary from breaking across the river line. Casualties remained below the critical threshold."
+        )
 
         return EvaluationOutput(
             agent="evaluation",
@@ -66,28 +73,25 @@ class EvaluationAgent:
                 EmergentEvent(
                     event_id="EVT-001",
                     type="diplomatic_development",
-                    description="Third-party UN peace envoy proposes a 24-hour tactical pause.",
-                    impact="May freeze current positions and allow replenishment.",
-                    requires_response=True
+                    description="Third-party UN peace envoy proposes a 24-hour tactical pause." if not is_sim_terminal else "Catastrophic event observed across theater.",
+                    impact="May freeze current positions and allow replenishment." if not is_sim_terminal else "Terminal outcome acknowledged.",
+                    requires_response=not is_sim_terminal
                 )
             ],
             simulation_control=SimulationControl(
                 concluded=concluded,
-                termination_reason="Target wargaming objectives and comparison threshold reached" if concluded else None,
-                continue_reason="Unresolved standoff and emergent ceasefire offer require next scenario iteration" if not concluded else "",
+                termination_reason=sim_output.termination.reason if is_sim_terminal else ("Target wargaming objectives and comparison threshold reached" if concluded else None),
+                continue_reason="Unresolved standoff and emergent developments require next scenario iteration" if not concluded else "",
                 next_scenario_required=not concluded
             ),
             next_scenario=NextScenarioRecommendation(
-                scenario_id=next_id,
+                scenario_id=next_id if not concluded else "NONE",
                 parent_scenario_id=contract.scenario_id,
-                reason="Incorporate diplomatic mediation rules and evaluate Blue posture under ceasefire constraints.",
-                required_changes=["Adjust Rules of Engagement", "Include UN mediator parameters"],
-                required_information=["Red military command's adherence verification"]
+                reason="Incorporate diplomatic mediation rules and evaluate Blue posture under ceasefire constraints." if not concluded else "Terminal condition reached; no subsequent scenario.",
+                required_changes=["Adjust Rules of Engagement", "Include UN mediator parameters"] if not concluded else [],
+                required_information=["Red military command's adherence verification"] if not concluded else []
             ),
-            strategic_conclusion=(
-                f"Scenario {contract.scenario_id} demonstrated that Blue's fortified redoubt at LOC-ALPHA successfully deterred the adversary from breaking across the river line. "
-                "Casualties remained below the critical threshold."
-            ),
+            strategic_conclusion=conclusion_text,
             human_review_required=True,
             dynamic={"source": "deterministic_fallback"}
         )
@@ -115,6 +119,7 @@ class EvaluationAgent:
             "- uncertainties: at least 2 critical intelligence, operational, or environmental unknowns\n"
             "- strategic_implications: at least 2 broader implications for future scenario iterations\n"
             "Identify emergent events, decide simulation control (conclude vs continue), and recommend next scenario steps.\n"
+            "CRITICAL: If the simulation is terminal or forces are annihilated, set simulation_control.concluded to true.\n"
             "Output MUST strictly adhere to the EvaluationOutput schema."
         )
 
@@ -133,30 +138,56 @@ class EvaluationAgent:
                 schema=EvaluationOutput,
                 temperature=0.2
             )
+            # Invariant: If simulation reached a terminal condition, it is authoritative and CANNOT be overridden
+            is_sim_terminal = bool(sim_output.terminal or (sim_output.termination and sim_output.termination.terminal) or sim_output.status == "TERMINATED")
+            if is_sim_terminal:
+                eval_output.simulation_control.concluded = True
+                eval_output.simulation_control.next_scenario_required = False
+                eval_output.simulation_control.termination_reason = sim_output.termination.reason or sim_output.termination.condition
+            elif iteration_count < max_iterations:
+                b_loss = sim_output.metrics.get("blue", {}).get("losses_percentage", 0.0)
+                r_loss = sim_output.metrics.get("red", {}).get("losses_percentage", 0.0)
+                if b_loss < 100.0 and r_loss < 100.0:
+                    eval_output.simulation_control.concluded = False
+                    eval_output.simulation_control.next_scenario_required = True
         except Exception as e:
             if not is_fallback_allowed():
                 raise e
             print(f"[bold yellow][AGENT WARNING][/bold yellow] Evaluation LLM failed: {e}. Using deterministic fallback.")
             eval_output = self._deterministic_fallback(contract, sim_output, iteration_count, max_iterations)
 
-        # Build ScenarioTransition if continuing
-        transition = None
-        if not eval_output.simulation_control.concluded and eval_output.simulation_control.next_scenario_required:
-            transition = ScenarioTransition(
-                transition_id=f"TRANS-{contract.scenario_id}",
-                current_scenario_id=contract.scenario_id,
-                transition_type="CONTINUE",
-                reason=eval_output.next_scenario.reason,
-                evaluation_summary=eval_output.strategic_conclusion,
-                emergent_events=[ev.model_dump() for ev in eval_output.emergent_events],
-                required_changes=eval_output.next_scenario.required_changes,
-                new_information=eval_output.next_scenario.required_information,
-                human_input=["Review ceasefire proposal and confirm defensive redoubt limits"],
-                next_scenario=TransitionNextScenario(
-                    requested=True,
-                    scenario_id=eval_output.next_scenario.scenario_id,
-                    parent_scenario_id=contract.scenario_id
-                )
+        # Enforce Simulator terminal authority on eval_output unconditionally
+        is_sim_terminal = bool(sim_output.terminal or (sim_output.termination and sim_output.termination.terminal) or sim_output.status == "TERMINATED")
+        if is_sim_terminal:
+            eval_output.simulation_control.concluded = True
+            eval_output.simulation_control.next_scenario_required = False
+            eval_output.simulation_control.termination_reason = sim_output.termination.reason or sim_output.termination.condition
+        else:
+            is_max_turns = iteration_count >= max_iterations
+            eval_output.simulation_control.concluded = is_max_turns
+            eval_output.simulation_control.next_scenario_required = not is_max_turns
+            eval_output.simulation_control.termination_reason = "Maximum turns reached" if is_max_turns else None
+
+        # Build ScenarioTransition for turn lineage progression
+        next_id = eval_output.next_scenario.scenario_id if (eval_output.next_scenario and not eval_output.simulation_control.concluded) else "NONE"
+        if next_id != "NONE" and "." not in next_id and contract.scenario_id != "NONE":
+            next_id = f"{contract.scenario_id}.1" if "." not in contract.scenario_id else f"{contract.scenario_id[:-1]}{int(contract.scenario_id[-1])+1}"
+
+        transition = ScenarioTransition(
+            transition_id=f"TRANS-{contract.scenario_id}",
+            current_scenario_id=contract.scenario_id,
+            transition_type="CONTINUE" if not eval_output.simulation_control.concluded else "CONCLUDE",
+            reason=eval_output.next_scenario.reason if (eval_output.next_scenario and not eval_output.simulation_control.concluded) else (sim_output.termination.reason or "Simulation concluded"),
+            evaluation_summary=eval_output.strategic_conclusion,
+            emergent_events=[ev.model_dump() for ev in eval_output.emergent_events],
+            required_changes=eval_output.next_scenario.required_changes if (eval_output.next_scenario and not eval_output.simulation_control.concluded) else [],
+            new_information=eval_output.next_scenario.required_information if (eval_output.next_scenario and not eval_output.simulation_control.concluded) else [],
+            human_input=["Review tactical developments and issue strategic guidance"],
+            next_scenario=TransitionNextScenario(
+                requested=not eval_output.simulation_control.concluded,
+                scenario_id=next_id,
+                parent_scenario_id=contract.scenario_id
             )
+        )
 
         return eval_output, transition

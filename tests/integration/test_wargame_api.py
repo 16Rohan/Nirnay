@@ -122,3 +122,77 @@ def test_wargame_multi_turn_continue():
     turns = session_data["turns"]
     assert len(turns) == 3
     assert [t["turn_number"] for t in turns] == [1, 2, 3]
+
+
+def test_wargame_session_init_and_websocket_streaming():
+    # 1. Pre-init session to reserve session_id
+    init_payload = {
+        "preset_id": "DEMO-001",
+        "turn_duration": "30s",
+        "human_guidance": "Hold FLP Alpha",
+        "seed": 42
+    }
+    init_resp = client.post("/wargame/session/init", json=init_payload)
+    assert init_resp.status_code == 200
+    session_id = init_resp.json()["session_id"]
+    assert session_id.startswith("WARGAME-")
+
+    # 2. Connect WebSocket to /ws/{session_id} and execute Turn 1
+    with client.websocket_connect(f"/ws/{session_id}") as websocket:
+        start_resp = client.post("/wargame/start", json={
+            "session_id": session_id,
+            "preset_id": "DEMO-001",
+            "turn_duration": "30s",
+            "human_guidance": "Hold FLP Alpha",
+            "seed": 42
+        })
+        assert start_resp.status_code == 200
+
+        # Receive streamed messages
+        received_event_types = []
+        simulation_completed_received = False
+        for _ in range(100):
+            try:
+                data = websocket.receive_json(mode="text")
+                if data.get("type") == "stage_event":
+                    evt_type = data.get("event_type")
+                    received_event_types.append(evt_type)
+                    if evt_type == "SIMULATION_COMPLETED":
+                        simulation_completed_received = True
+                        assert "blue_losses_percentage" in data["payload"]
+                        assert "red_losses_percentage" in data["payload"]
+                elif data.get("type") == "turn_completed":
+                    break
+            except Exception:
+                break
+
+        assert "CONTEXT_STARTED" in received_event_types
+        assert "ORCHESTRATOR_STARTED" in received_event_types
+        assert "BLUE_STARTED" in received_event_types
+        assert "RED_STARTED" in received_event_types
+        assert "SIMULATION_STARTED" in received_event_types
+        assert simulation_completed_received is True
+
+
+def test_wargame_command_terminal_short_circuit_api():
+    init_resp = client.post("/wargame/session/init", json={"preset_id": "DEMO-001"})
+    session_id = init_resp.json()["session_id"]
+
+    # Start Turn 1
+    t1_resp = client.post("/wargame/start", json={"session_id": session_id, "preset_id": "DEMO-001"})
+    assert t1_resp.status_code == 200
+
+    # Submit catastrophic termination command
+    cmd_resp = client.post(f"/wargame/command/{session_id}", json={
+        "command": "Terminate the simulation immediately. A third-party adversarial nuclear event occurs. Blue and Red are both destroyed. Terminate campaign.",
+        "advance_turn": True
+    })
+    assert cmd_resp.status_code == 200
+    t2 = cmd_resp.json()
+
+    assert t2["concluded"] is True
+    assert t2["session_status"] == "concluded"
+    assert t2["metrics"]["status"] == "TERMINATED"
+    assert t2["metrics"]["termination_condition"] == "MUTUAL_DESTRUCTION"
+    assert t2["decisions"]["blue_actions_count"] == 0
+    assert t2["decisions"]["red_actions_count"] == 0

@@ -10,16 +10,20 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['three', '@react-three/fiber', '@react-three/drei', 'gsap', 'framer-motion'],
+    include: ['react', 'react-dom', 'react-router-dom', 'framer-motion', 'lucide-react', 'zustand'],
   },
   build: {
-    chunkSizeWarningLimit: 1200,
+    target: 'esnext',
+    minify: 'esbuild',
+    cssMinify: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ['three', '@react-three/fiber', '@react-three/drei'],
-          gsap: ['gsap'],
-          framer: ['framer-motion'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-scroll': ['lenis', 'gsap', 'gsap/ScrollTrigger'],
         },
       },
     },

@@ -18,12 +18,21 @@ export default function HeroCanvasEffects({ mouseX = 0, mouseY = 0 }: HeroCanvas
     let width = (canvas.width = window.innerWidth)
     let height = (canvas.height = window.innerHeight)
 
-    const handleResize = () => {
-      if (!canvas) return
-      width = canvas.width = window.innerWidth
-      height = canvas.height = window.innerHeight
+    let isVisible = true
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden
     }
-    window.addEventListener('resize', handleResize)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        isVisible = entry.isIntersecting && !document.hidden
+      })
+    }, { threshold: 0.05 })
+
+    if (canvas) {
+      observer.observe(canvas)
+    }
 
     // ── Particle Systems ──
     // 1. Smoke particles near explosion (around x: 0.78, y: 0.22)
@@ -72,6 +81,11 @@ export default function HeroCanvasEffects({ mouseX = 0, mouseY = 0 }: HeroCanvas
     let time = 0
 
     const render = () => {
+      if (!isVisible) {
+        animationFrameId = requestAnimationFrame(render)
+        return
+      }
+
       time += 0.02
       ctx.clearRect(0, 0, width, height)
 
@@ -276,7 +290,8 @@ export default function HeroCanvasEffects({ mouseX = 0, mouseY = 0 }: HeroCanvas
     render()
 
     return () => {
-      window.removeEventListener('resize', handleResize)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      observer.disconnect()
       cancelAnimationFrame(animationFrameId)
     }
   }, [mouseX, mouseY])
