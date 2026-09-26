@@ -30,9 +30,11 @@ import {
   Target,
 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
-import SimulationWorld, { type CameraMode } from '../components/simulation3d/World'
-import { mapSimulationOutputToRenderState } from '../adapters/simulation3dAdapter'
-import type { Entity, SimulationObjective } from '@/types/simulation_3d'
+import { TacticalArena2D, ARENA_VIEWPORTS } from '../components/tactical_arena_2d/TacticalArena2D'
+import { SYNTHETIC_BATTLEFIELD_MAP } from '../components/tactical_arena_2d/TerrainMapConfig'
+import { mapSimulationToTacticalArena2D } from '../adapters/tacticalArena2dAdapter'
+import { TacticalInspector } from '../components/tactical_arena_2d/TacticalInspector'
+import type { ArenaViewMode, TacticalEntity2D, TacticalObjective2D, TacticalEvent2D } from '../types/tactical_arena_2d'
 import '../styles/simulation.css'
 
 // API Base URL
@@ -139,8 +141,7 @@ export default function WargamingPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [wsConnected, setWsConnected] = useState<boolean>(false)
 
-  // 3D Battlefield Presentation State
-  const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
+  // 2D Tactical Battlefield Presentation State
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null)
   const [activeLayers, setActiveLayers] = useState({
     terrain: true,
@@ -371,18 +372,20 @@ export default function WargamingPage() {
   const activePreset = presets.find((p) => p.preset_id === selectedPresetId) || presets[0]
   const displayedTurn = turnHistory[selectedTurnIndex] || currentTurn
 
-  // Derive 3D Battlefield state from deterministic simulation output
-  const renderState = useMemo(() => {
-    return mapSimulationOutputToRenderState(displayedTurn)
+  // Derive 2D Tactical Battlefield state from deterministic simulation output
+  const arena2dData = useMemo(() => {
+    return mapSimulationToTacticalArena2D(displayedTurn)
   }, [displayedTurn])
 
-  const selectedUnit = useMemo(
-    () => renderState.units.find((u) => u.id === selectedEntityId),
-    [renderState.units, selectedEntityId]
+  const [viewMode2D, setViewMode2D] = useState<ArenaViewMode>('STRATEGIC')
+
+  const selectedEntity = useMemo(
+    () => arena2dData.entities.find((u) => u.id === selectedEntityId) || null,
+    [arena2dData.entities, selectedEntityId]
   )
   const selectedObjective = useMemo(
-    () => renderState.objectives.find((o) => o.id === selectedEntityId),
-    [renderState.objectives, selectedEntityId]
+    () => arena2dData.objectives.find((o) => o.id === selectedEntityId) || null,
+    [arena2dData.objectives, selectedEntityId]
   )
 
   const toggleLayer = (key: keyof typeof activeLayers) => {
@@ -702,42 +705,52 @@ export default function WargamingPage() {
           )}
         </div>
 
-        {/* 3D Tactical Battlefield Theater Container */}
+        {/* 2D Tactical Battlefield Theater Container */}
         {theaterViewMode !== 'analytics' && (
           <div
             className={`relative w-full rounded-2xl overflow-hidden border border-[#168CFF]/30 bg-[#06111C] shadow-[0_0_35px_rgba(22,140,255,0.12)] mb-8 transition-all duration-300 ${
               theaterViewMode === 'theater' ? 'h-[640px] lg:h-[720px]' : 'h-[460px] lg:h-[520px]'
             }`}
           >
-            {/* Three.js Interactive 3D World */}
+            {/* 2D SVG Cartographic Tactical Arena */}
             <div className="absolute inset-0">
-              <SimulationWorld
-                units={renderState.units}
-                objectives={renderState.objectives}
-                events={renderState.events}
-                simulationTime={renderState.simulationTime}
-                selected={selectedEntityId}
-                onSelect={(id) => setSelectedEntityId(id)}
-                layers={activeLayers}
-                cameraMode={cameraMode}
+              <TacticalArena2D
+                mapConfig={SYNTHETIC_BATTLEFIELD_MAP}
+                entities={arena2dData.entities}
+                objectives={arena2dData.objectives}
+                events={arena2dData.events}
+                viewMode={viewMode2D}
+                selectedId={selectedEntityId}
+                onSelectEntity={(id) => setSelectedEntityId(id)}
+                onSelectObjective={(id) => setSelectedEntityId(id)}
+                onSelectEvent={(evt) => {
+                  if (evt.sourceEntityId) setSelectedEntityId(evt.sourceEntityId)
+                  setViewMode2D('EVENT')
+                }}
+                layers={{
+                  terrain: activeLayers.terrain,
+                  grid: true,
+                  contours: true,
+                  routes: activeLayers.routes,
+                  objectives: activeLayers.objectives,
+                  units: activeLayers.units,
+                  events: true,
+                }}
               />
             </div>
 
-            {/* Tactical Grid & Vignette Overlay */}
-            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_45%,rgba(2,7,13,0.7)_100%)]" />
-
             {/* Top Left: Operational Sector & Active Force Count */}
             <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
-              <div className="px-3.5 py-1.5 rounded-xl bg-[#06111C]/85 backdrop-blur-md border border-white/10 flex items-center gap-2">
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-white/10 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#42D99A] animate-pulse" />
                 <span className="text-xs font-mono font-bold tracking-wider text-white uppercase">
-                  {activePreset.theater || 'EASTERN VALLEY'} · GRID H-04
+                  {SYNTHETIC_BATTLEFIELD_MAP.name} · GRID H-04
                 </span>
               </div>
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06111C]/85 backdrop-blur-md border border-white/10 text-[11px] font-mono text-[#A6B6C6]">
-                <span className="text-[#42C7FF] font-semibold">{renderState.units.length} UNITS</span>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-white/10 text-[11px] font-mono text-[#A6B6C6]">
+                <span className="text-[#42C7FF] font-semibold">{arena2dData.entities.length} UNITS</span>
                 <span className="text-white/20">|</span>
-                <span className="text-[#FFB347] font-semibold">{renderState.objectives.length} OBJECTIVES</span>
+                <span className="text-[#FFB347] font-semibold">{arena2dData.objectives.length} OBJECTIVES</span>
                 {displayedTurn && (
                   <>
                     <span className="text-white/20">|</span>
@@ -747,27 +760,30 @@ export default function WargamingPage() {
               </div>
             </div>
 
-            {/* Top Right: Camera Selector & Reset */}
+            {/* Top Right: Predefined Fixed View Selector (Strategic / Operational / Event) */}
             <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
-              <select
-                value={cameraMode}
-                onChange={(e) => setCameraMode(e.target.value as CameraMode)}
-                className="bg-[#06111C]/90 backdrop-blur-md border border-white/15 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:border-[#42C7FF] outline-none cursor-pointer"
-              >
-                <option value="overview">Strategic Overview</option>
-                <option value="follow">Follow Selected Unit</option>
-                <option value="aircraft">Aircraft Camera</option>
-                <option value="terrain">Terrain Angle</option>
-                <option value="objective">Objective Focus</option>
-                <option value="tactical">Tactical Top-Down</option>
-              </select>
+              <div className="flex items-center bg-[#06111C]/90 backdrop-blur-md p-1 rounded-xl border border-white/15">
+                {(['STRATEGIC', 'OPERATIONAL', 'EVENT'] as ArenaViewMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode2D(mode)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase transition-all ${
+                      viewMode2D === mode
+                        ? 'bg-[#168CFF] text-white shadow-[0_0_10px_rgba(22,140,255,0.4)]'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
 
               <button
                 onClick={() => {
                   setSelectedEntityId(null)
-                  setCameraMode('overview')
+                  setViewMode2D('STRATEGIC')
                 }}
-                title="Reset Camera & Selection"
+                title="Reset View & Selection"
                 className="p-2 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-white/15 text-[#A6B6C6] hover:text-white hover:border-[#42C7FF] transition-all"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -776,22 +792,22 @@ export default function WargamingPage() {
 
             {/* Bottom Left: Interactive Selection HUD (Unit or Objective) */}
             <AnimatePresence>
-              {selectedUnit && (
+              {selectedEntity && (
                 <motion.div
                   initial={{ opacity: 0, y: 12, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 12, scale: 0.96 }}
-                  className="absolute bottom-6 left-6 z-20 w-80 p-4 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-[#168CFF]/40 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-xs text-white pointer-events-auto"
+                  className="absolute bottom-6 left-6 z-20 w-80 p-4 rounded-xl bg-[#06111C]/95 backdrop-blur-md border border-[#168CFF]/40 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-xs text-white pointer-events-auto"
                 >
                   <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/10">
                     <div className="flex items-center gap-2">
                       <span
                         className={`w-2.5 h-2.5 rounded-full ${
-                          selectedUnit.faction === 'BLUE' ? 'bg-[#42C7FF]' : 'bg-[#FF5968]'
+                          selectedEntity.faction === 'BLUE' ? 'bg-[#42C7FF]' : 'bg-[#FF5968]'
                         }`}
                       />
                       <span className="font-mono text-[10px] tracking-wider text-[#A6B6C6] uppercase">
-                        {selectedUnit.faction} UNIT PROFILE
+                        {selectedEntity.faction} {selectedEntity.unitClass}
                       </span>
                     </div>
                     <button
@@ -802,30 +818,30 @@ export default function WargamingPage() {
                     </button>
                   </div>
 
-                  <div className="text-sm font-bold text-white mb-0.5">{selectedUnit.name}</div>
-                  <div className="font-mono text-[11px] text-[#42C7FF] mb-3">ID: {selectedUnit.id}</div>
+                  <div className="text-sm font-bold text-white mb-0.5">{selectedEntity.name}</div>
+                  <div className="font-mono text-[11px] text-[#42C7FF] mb-3">ID: {selectedEntity.id}</div>
 
                   <div className="space-y-2">
                     <div>
                       <div className="flex justify-between text-[11px] font-mono mb-1">
-                        <span className="text-[#A6B6C6]">COMBAT EFFECTIVENESS</span>
+                        <span className="text-[#A6B6C6]">FORCE STRENGTH</span>
                         <span
                           className={
-                            selectedUnit.strength && selectedUnit.strength > 40
+                            selectedEntity.strength.currentStrength > 40
                               ? 'text-[#42D99A]'
                               : 'text-[#FF5968]'
                           }
                         >
-                          {selectedUnit.strength !== undefined ? `${selectedUnit.strength}%` : '100%'}
+                          {selectedEntity.strength.currentStrength}% ({selectedEntity.strength.elementCount} elements)
                         </span>
                       </div>
                       <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
-                            selectedUnit.faction === 'BLUE' ? 'bg-[#42C7FF]' : 'bg-[#FF5968]'
+                            selectedEntity.faction === 'BLUE' ? 'bg-[#42C7FF]' : 'bg-[#FF5968]'
                           }`}
                           style={{
-                            width: `${selectedUnit.strength !== undefined ? selectedUnit.strength : 100}%`,
+                            width: `${selectedEntity.strength.currentStrength}%`,
                           }}
                         />
                       </div>
@@ -834,31 +850,33 @@ export default function WargamingPage() {
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 font-mono text-[10px]">
                       <div>
                         <span className="text-[#71869A] block">STATUS</span>
-                        <span className="text-white font-medium">{selectedUnit.status}</span>
-                      </div>
-                      <div>
-                        <span className="text-[#71869A] block">UNIT TYPE</span>
-                        <span className="text-white font-medium uppercase">{selectedUnit.type}</span>
+                        <span className="text-white font-medium">{selectedEntity.status}</span>
                       </div>
                       <div>
                         <span className="text-[#71869A] block">SPEED</span>
-                        <span className="text-white font-medium">{selectedUnit.speed} km/h</span>
+                        <span className="text-white font-medium">{selectedEntity.speed} km/h</span>
+                      </div>
+                      <div>
+                        <span className="text-[#71869A] block">GRID</span>
+                        <span className="text-white font-medium">
+                          X:{Math.round(selectedEntity.position.x)} Y:{Math.round(selectedEntity.position.y)}
+                        </span>
                       </div>
                       <div>
                         <span className="text-[#71869A] block">HEADING</span>
-                        <span className="text-white font-medium">{selectedUnit.heading}°</span>
+                        <span className="text-white font-medium">{selectedEntity.heading}°</span>
                       </div>
                     </div>
                   </div>
                 </motion.div>
               )}
 
-              {selectedObjective && !selectedUnit && (
+              {selectedObjective && !selectedEntity && (
                 <motion.div
                   initial={{ opacity: 0, y: 12, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 12, scale: 0.96 }}
-                  className="absolute bottom-6 left-6 z-20 w-80 p-4 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-[#FFB347]/40 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-xs text-white pointer-events-auto"
+                  className="absolute bottom-6 left-6 z-20 w-80 p-4 rounded-xl bg-[#06111C]/95 backdrop-blur-md border border-[#FFB347]/40 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-xs text-white pointer-events-auto"
                 >
                   <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/10">
                     <div className="flex items-center gap-2">
@@ -888,38 +906,18 @@ export default function WargamingPage() {
               )}
             </AnimatePresence>
 
-            {/* Bottom Center: Mini Legend */}
-            <div className="hidden sm:flex absolute bottom-4 left-1/2 -translate-x-1/2 z-20 items-center gap-4 px-3.5 py-1.5 rounded-full bg-[#06111C]/85 backdrop-blur-md border border-white/10 text-[10px] font-mono text-[#A6B6C6]">
+            {/* Bottom Center: Mini Cartographic Legend */}
+            <div className="hidden sm:flex absolute bottom-4 left-1/2 -translate-x-1/2 z-20 items-center gap-4 px-3.5 py-1.5 rounded-full bg-[#06111C]/90 backdrop-blur-md border border-white/10 text-[10px] font-mono text-[#A6B6C6]">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#42C7FF]" /> FRIENDLY (BLUE)
+                <span className="w-2 h-2 rounded-full bg-[#2563eb]" /> FRIENDLY (BLUE)
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#FF5968]" /> ADVERSARY (RED)
+                <span className="w-2 h-2 rounded-full bg-[#dc2626]" /> ADVERSARY (RED)
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#FFB347]" /> CONTESTED
+                <span className="w-2 h-2 rounded-full bg-[#16a34a]" /> SECURED
               </span>
             </div>
-
-            {/* Bottom Right: Live Event Ticker */}
-            {renderState.events.length > 0 && (
-              <div className="hidden md:flex absolute bottom-4 right-4 z-20 max-w-xs flex-col gap-1.5 pointer-events-none">
-                {renderState.events.slice(-2).map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="px-3 py-1.5 rounded-lg bg-[#06111C]/85 backdrop-blur-md border border-white/10 text-[10px] font-mono text-[#A6B6C6] flex items-center gap-2 shadow-lg"
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        ev.type === 'intercept' ? 'bg-[#FF5968]' : 'bg-[#42C7FF]'
-                      }`}
-                    />
-                    <span className="text-white font-semibold shrink-0">[{ev.agent}]</span>
-                    <span className="truncate">{ev.message}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
