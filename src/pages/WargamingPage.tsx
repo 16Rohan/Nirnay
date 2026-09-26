@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield,
@@ -19,14 +19,21 @@ import {
   ChevronDown,
   ChevronUp,
   Layers,
+  Layers3,
   Activity,
   Compass,
   Zap,
   Info,
   Sliders,
   RotateCcw,
+  Maximize2,
+  Target,
 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import SimulationWorld, { type CameraMode } from '../components/simulation3d/World'
+import { mapSimulationOutputToRenderState } from '../adapters/simulation3dAdapter'
+import type { Entity, SimulationObjective } from '@/types/simulation_3d'
+import '../styles/simulation.css'
 
 // API Base URL
 const API_BASE = 'http://localhost:8000'
@@ -53,7 +60,7 @@ interface EmergentEvent {
 
 interface TurnResult {
   session_id: string
-  turn_number: int
+  turn_number: number
   scenario_id: string
   parent_scenario_id?: string
   human_guidance: string
@@ -84,10 +91,9 @@ interface TurnResult {
   step_logs: string[]
   strategic_report?: string
   interpreted_command?: any
+  simulation_output?: any
   timestamp: string
 }
-
-type int = number
 
 const AGENT_PIPELINE_STAGES = [
   { id: 'memory', label: 'Context Memory', icon: Layers, tag: '[MEMORY]' },
@@ -132,6 +138,19 @@ export default function WargamingPage() {
   const [isSubmittingCommand, setIsSubmittingCommand] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [wsConnected, setWsConnected] = useState<boolean>(false)
+
+  // 3D Battlefield Presentation State
+  const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null)
+  const [activeLayers, setActiveLayers] = useState({
+    terrain: true,
+    units: true,
+    routes: true,
+    objectives: true,
+    radar: true,
+    infrastructure: true,
+  })
+  const [theaterViewMode, setTheaterViewMode] = useState<'split' | 'theater' | 'analytics'>('split')
 
   const logEndRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -351,6 +370,24 @@ export default function WargamingPage() {
 
   const activePreset = presets.find((p) => p.preset_id === selectedPresetId) || presets[0]
   const displayedTurn = turnHistory[selectedTurnIndex] || currentTurn
+
+  // Derive 3D Battlefield state from deterministic simulation output
+  const renderState = useMemo(() => {
+    return mapSimulationOutputToRenderState(displayedTurn)
+  }, [displayedTurn])
+
+  const selectedUnit = useMemo(
+    () => renderState.units.find((u) => u.id === selectedEntityId),
+    [renderState.units, selectedEntityId]
+  )
+  const selectedObjective = useMemo(
+    () => renderState.objectives.find((o) => o.id === selectedEntityId),
+    [renderState.objectives, selectedEntityId]
+  )
+
+  const toggleLayer = (key: keyof typeof activeLayers) => {
+    setActiveLayers((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   return (
     <div className="min-h-screen bg-[#02070D] text-[#F5FAFF] font-body selection:bg-[#42C7FF]/30 select-none pb-24">
@@ -608,6 +645,283 @@ export default function WargamingPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Theater View Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#06111C] border border-white/10">
+            <button
+              onClick={() => setTheaterViewMode('split')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                theaterViewMode === 'split'
+                  ? 'bg-[#168CFF]/20 border border-[#42C7FF]/40 text-[#63E6FF] font-semibold shadow-[0_0_10px_rgba(66,199,255,0.2)]'
+                  : 'text-[#71869A] hover:text-white'
+              }`}
+            >
+              Unified Command
+            </button>
+            <button
+              onClick={() => setTheaterViewMode('theater')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                theaterViewMode === 'theater'
+                  ? 'bg-[#168CFF]/20 border border-[#42C7FF]/40 text-[#63E6FF] font-semibold shadow-[0_0_10px_rgba(66,199,255,0.2)]'
+                  : 'text-[#71869A] hover:text-white'
+              }`}
+            >
+              3D Theater Focus
+            </button>
+            <button
+              onClick={() => setTheaterViewMode('analytics')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                theaterViewMode === 'analytics'
+                  ? 'bg-[#168CFF]/20 border border-[#42C7FF]/40 text-[#63E6FF] font-semibold shadow-[0_0_10px_rgba(66,199,255,0.2)]'
+                  : 'text-[#71869A] hover:text-white'
+              }`}
+            >
+              Analytics Only
+            </button>
+          </div>
+
+          {/* Quick Display Layer Toggles */}
+          {theaterViewMode !== 'analytics' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-[11px] font-mono">
+              <span className="text-[#71869A] uppercase text-[10px] mr-1 hidden md:inline">3D Layers:</span>
+              {(['terrain', 'units', 'routes', 'objectives', 'infrastructure'] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => toggleLayer(l)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] uppercase border transition-all ${
+                    activeLayers[l]
+                      ? 'bg-[#42C7FF]/15 border-[#42C7FF]/40 text-[#63E6FF]'
+                      : 'bg-[#06111C] border-white/10 text-white/40 hover:text-white'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 3D Tactical Battlefield Theater Container */}
+        {theaterViewMode !== 'analytics' && (
+          <div
+            className={`relative w-full rounded-2xl overflow-hidden border border-[#168CFF]/30 bg-[#06111C] shadow-[0_0_35px_rgba(22,140,255,0.12)] mb-8 transition-all duration-300 ${
+              theaterViewMode === 'theater' ? 'h-[640px] lg:h-[720px]' : 'h-[460px] lg:h-[520px]'
+            }`}
+          >
+            {/* Three.js Interactive 3D World */}
+            <div className="absolute inset-0">
+              <SimulationWorld
+                units={renderState.units}
+                objectives={renderState.objectives}
+                events={renderState.events}
+                simulationTime={renderState.simulationTime}
+                selected={selectedEntityId}
+                onSelect={(id) => setSelectedEntityId(id)}
+                layers={activeLayers}
+                cameraMode={cameraMode}
+              />
+            </div>
+
+            {/* Tactical Grid & Vignette Overlay */}
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_45%,rgba(2,7,13,0.7)_100%)]" />
+
+            {/* Top Left: Operational Sector & Active Force Count */}
+            <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
+              <div className="px-3.5 py-1.5 rounded-xl bg-[#06111C]/85 backdrop-blur-md border border-white/10 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#42D99A] animate-pulse" />
+                <span className="text-xs font-mono font-bold tracking-wider text-white uppercase">
+                  {activePreset.theater || 'EASTERN VALLEY'} · GRID H-04
+                </span>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06111C]/85 backdrop-blur-md border border-white/10 text-[11px] font-mono text-[#A6B6C6]">
+                <span className="text-[#42C7FF] font-semibold">{renderState.units.length} UNITS</span>
+                <span className="text-white/20">|</span>
+                <span className="text-[#FFB347] font-semibold">{renderState.objectives.length} OBJECTIVES</span>
+                {displayedTurn && (
+                  <>
+                    <span className="text-white/20">|</span>
+                    <span className="text-[#63E6FF]">TURN {displayedTurn.turn_number} STATE</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Top Right: Camera Selector & Reset */}
+            <div className="absolute top-4 right-4 z-20 flex items-center gap-2 pointer-events-auto">
+              <select
+                value={cameraMode}
+                onChange={(e) => setCameraMode(e.target.value as CameraMode)}
+                className="bg-[#06111C]/90 backdrop-blur-md border border-white/15 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:border-[#42C7FF] outline-none cursor-pointer"
+              >
+                <option value="overview">Strategic Overview</option>
+                <option value="follow">Follow Selected Unit</option>
+                <option value="aircraft">Aircraft Camera</option>
+                <option value="terrain">Terrain Angle</option>
+                <option value="objective">Objective Focus</option>
+                <option value="tactical">Tactical Top-Down</option>
+              </select>
+
+              <button
+                onClick={() => {
+                  setSelectedEntityId(null)
+                  setCameraMode('overview')
+                }}
+                title="Reset Camera & Selection"
+                className="p-2 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-white/15 text-[#A6B6C6] hover:text-white hover:border-[#42C7FF] transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Bottom Left: Interactive Selection HUD (Unit or Objective) */}
+            <AnimatePresence>
+              {selectedUnit && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                  className="absolute bottom-6 left-6 z-20 w-80 p-4 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-[#168CFF]/40 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-xs text-white pointer-events-auto"
+                >
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          selectedUnit.faction === 'BLUE' ? 'bg-[#42C7FF]' : 'bg-[#FF5968]'
+                        }`}
+                      />
+                      <span className="font-mono text-[10px] tracking-wider text-[#A6B6C6] uppercase">
+                        {selectedUnit.faction} UNIT PROFILE
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedEntityId(null)}
+                      className="w-5 h-5 flex items-center justify-center rounded text-white/60 hover:text-white hover:bg-white/10 font-bold"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="text-sm font-bold text-white mb-0.5">{selectedUnit.name}</div>
+                  <div className="font-mono text-[11px] text-[#42C7FF] mb-3">ID: {selectedUnit.id}</div>
+
+                  <div className="space-y-2">
+                    <div>
+                      <div className="flex justify-between text-[11px] font-mono mb-1">
+                        <span className="text-[#A6B6C6]">COMBAT EFFECTIVENESS</span>
+                        <span
+                          className={
+                            selectedUnit.strength && selectedUnit.strength > 40
+                              ? 'text-[#42D99A]'
+                              : 'text-[#FF5968]'
+                          }
+                        >
+                          {selectedUnit.strength !== undefined ? `${selectedUnit.strength}%` : '100%'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            selectedUnit.faction === 'BLUE' ? 'bg-[#42C7FF]' : 'bg-[#FF5968]'
+                          }`}
+                          style={{
+                            width: `${selectedUnit.strength !== undefined ? selectedUnit.strength : 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 font-mono text-[10px]">
+                      <div>
+                        <span className="text-[#71869A] block">STATUS</span>
+                        <span className="text-white font-medium">{selectedUnit.status}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#71869A] block">UNIT TYPE</span>
+                        <span className="text-white font-medium uppercase">{selectedUnit.type}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#71869A] block">SPEED</span>
+                        <span className="text-white font-medium">{selectedUnit.speed} km/h</span>
+                      </div>
+                      <div>
+                        <span className="text-[#71869A] block">HEADING</span>
+                        <span className="text-white font-medium">{selectedUnit.heading}°</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {selectedObjective && !selectedUnit && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                  className="absolute bottom-6 left-6 z-20 w-80 p-4 rounded-xl bg-[#06111C]/90 backdrop-blur-md border border-[#FFB347]/40 shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-xs text-white pointer-events-auto"
+                >
+                  <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-3.5 h-3.5 text-[#FFB347]" />
+                      <span className="font-mono text-[10px] tracking-wider text-[#A6B6C6] uppercase">
+                        TACTICAL OBJECTIVE
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedEntityId(null)}
+                      className="w-5 h-5 flex items-center justify-center rounded text-white/60 hover:text-white hover:bg-white/10 font-bold"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="text-sm font-bold text-white mb-0.5">{selectedObjective.name}</div>
+                  <div className="font-mono text-[11px] text-[#FFB347] mb-3">ID: {selectedObjective.id}</div>
+
+                  <div className="p-2.5 rounded-lg bg-[#0A1929] border border-white/5 flex items-center justify-between font-mono text-[11px]">
+                    <span className="text-[#A6B6C6]">SECTOR CONTROL:</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#168CFF]/20 text-[#63E6FF] border border-[#168CFF]/30">
+                      {selectedObjective.state}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Bottom Center: Mini Legend */}
+            <div className="hidden sm:flex absolute bottom-4 left-1/2 -translate-x-1/2 z-20 items-center gap-4 px-3.5 py-1.5 rounded-full bg-[#06111C]/85 backdrop-blur-md border border-white/10 text-[10px] font-mono text-[#A6B6C6]">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#42C7FF]" /> FRIENDLY (BLUE)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#FF5968]" /> ADVERSARY (RED)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#FFB347]" /> CONTESTED
+              </span>
+            </div>
+
+            {/* Bottom Right: Live Event Ticker */}
+            {renderState.events.length > 0 && (
+              <div className="hidden md:flex absolute bottom-4 right-4 z-20 max-w-xs flex-col gap-1.5 pointer-events-none">
+                {renderState.events.slice(-2).map((ev) => (
+                  <div
+                    key={ev.id}
+                    className="px-3 py-1.5 rounded-lg bg-[#06111C]/85 backdrop-blur-md border border-white/10 text-[10px] font-mono text-[#A6B6C6] flex items-center gap-2 shadow-lg"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        ev.type === 'intercept' ? 'bg-[#FF5968]' : 'bg-[#42C7FF]'
+                      }`}
+                    />
+                    <span className="text-white font-semibold shrink-0">[{ev.agent}]</span>
+                    <span className="truncate">{ev.message}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Active Turn Results Dashboard */}
         {displayedTurn ? (

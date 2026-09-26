@@ -25,6 +25,7 @@ class WargameState(BaseModel):
     iteration_count: int = 1
     max_iterations: int = 2
     human_guidance: str = "Maintain defensive redoubt at LOC-ALPHA; avoid cross-border escalation."
+    turn_based: bool = False
     
     # State Artifacts / Contracts
     context: Optional[ResolvedAgentContext] = None
@@ -37,6 +38,7 @@ class WargameState(BaseModel):
     red_output: Optional[RedTeamOutput] = None
     previous_blue_output: Optional[BlueTeamOutput] = None
     previous_red_output: Optional[RedTeamOutput] = None
+    previous_simulation_output: Optional[SimulationOutput] = None
     human_intent_contract: Optional[HumanInputContract] = None
     
     simulation_input: Optional[SimulationInput] = None

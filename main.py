@@ -12,9 +12,14 @@ def main():
     backend_cmd = [sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000", "--reload"]
     frontend_cmd = ["npm", "run", "dev"]
 
-    print("Starting Nirnay Platform (Backend & Frontend)...")
-    print("  Backend:  http://127.0.0.1:8000")
-    print("  Frontend: http://localhost:5173\n")
+    print("=========================================================")
+    print("  NIRNAY Strategic Decision Intelligence Platform")
+    print("=========================================================")
+    print("  Backend API:        http://127.0.0.1:8000")
+    print("  API Documentation:  http://127.0.0.1:8000/docs")
+    print("  Frontend UI:        http://localhost:5173")
+    print("  3D Wargaming Arena: http://localhost:5173/wargame")
+    print("=========================================================\n")
 
     processes = []
 

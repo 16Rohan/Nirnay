@@ -1,4 +1,4 @@
-import type { Entity, SimulationEvent, SimulationState, Vector3Tuple } from '../../../contracts/simulation_3d'
+import type { Entity, SimulationEvent, SimulationState, Vector3Tuple } from '@/types/simulation_3d'
 import type { SimulationSource } from './SimulationSource'
 
 const initialEntities: Entity[] = [
@@ -63,23 +63,59 @@ export class MockSimulationEngine implements SimulationSource {
         events = [{ ...next, id: `evt-${this.state.tick + 1}`, simulationTime }, ...events].slice(0, 12)
         this.eventIndex += 1
       }
-      const entities = this.state.entities.map(entity => {
+      const entities = this.state.entities.map((entity: Entity, idx: number) => {
         if (entity.route.length < 2) return entity
-        if (entity.type === 'interceptor' && elapsed < 18) return { ...entity, velocity: [0, 0, 0] as Vector3Tuple, status: 'STANDBY' as const }
-        if (entity.type === 'missile' && elapsed < 24) return { ...entity, velocity: [0, 0, 0] as Vector3Tuple }
-        const rate = entity.type === 'missile' ? 1.8 : entity.type === 'helicopter' ? .25 : .42
-        const progress = entity.type === 'missile'
-          ? Math.max(0, elapsed - 24) * .32
-          : entity.type === 'interceptor'
-            ? Math.max(0, elapsed - 18) * .08
-            : this.phase * rate + initialEntities.findIndex(item => item.id === entity.id) * .11
-        const segment = Math.floor(progress) % (entity.route.length - 1)
-        const t = progress % 1
-        const a = entity.route[segment], b = entity.route[segment + 1]
-        const scale = rate * 20 * this.state.speed
-        const velocity: Vector3Tuple = [(b[0] - a[0]) * scale, (b[1] - a[1]) * scale, (b[2] - a[2]) * scale]
-        const heading = Math.round((Math.atan2(b[0] - a[0], b[2] - a[2]) * 180 / Math.PI + 360) % 360)
-        return { ...entity, status: entity.type === 'interceptor' ? 'ACTIVE' as const : entity.status, position: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t] as Vector3Tuple, velocity, heading }
+        if (entity.type === 'interceptor' && elapsed < 18) {
+          return { ...entity, velocity: [0, 0, 0] as Vector3Tuple, status: 'STANDBY' as const }
+        }
+        if (entity.type === 'missile' && elapsed < 24) {
+          return { ...entity, velocity: [0, 0, 0] as Vector3Tuple }
+        }
+
+        // Realistic speeds and cyclic smooth waypoint interpolation
+        const speedScale =
+          entity.type === 'missile'
+            ? 0.5
+            : entity.type === 'interceptor'
+            ? 0.18
+            : entity.type === 'fighter'
+            ? 0.15
+            : entity.type === 'drone'
+            ? 0.09
+            : entity.type === 'helicopter'
+            ? 0.08
+            : 0.04
+
+        const numSegments = entity.route.length - 1
+        // Offset each entity slightly so they don't move in lockstep
+        const tTotal = (elapsed * speedScale + idx * 0.45) % numSegments
+        const currentSeg = Math.floor(tTotal)
+        const segT = tTotal - currentSeg
+
+        const a = entity.route[currentSeg]
+        const b = entity.route[currentSeg + 1]
+
+        const dx = b[0] - a[0]
+        const dy = b[1] - a[1]
+        const dz = b[2] - a[2]
+
+        const currentPos: Vector3Tuple = [
+          a[0] + dx * segT,
+          a[1] + dy * segT,
+          a[2] + dz * segT,
+        ]
+
+        const velScale = speedScale * 30
+        const velocity: Vector3Tuple = [dx * velScale, dy * velScale, dz * velScale]
+        const heading = Math.round((Math.atan2(dx, dz) * 180 / Math.PI + 360) % 360)
+
+        return {
+          ...entity,
+          status: entity.type === 'interceptor' && elapsed >= 18 ? ('ENGAGING' as const) : entity.status,
+          position: currentPos,
+          velocity,
+          heading,
+        }
       })
       this.state = { ...this.state, simulationTime, tick: this.state.tick + 1, entities, events }
       this.emit()

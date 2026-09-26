@@ -1,5 +1,5 @@
 import { Activity } from 'lucide-react'
-import type { Entity, SimulationEvent, SimulationObjective } from '../../../contracts/simulation_3d'
+import type { Entity, SimulationEvent, SimulationObjective } from '@/types/simulation_3d'
 
 type Props = {
   entity?: Entity

@@ -31,6 +31,13 @@ export default function SimulationPage() {
         {activeSessionId && (
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate('/simulation')}
+              className="px-4 py-2 rounded bg-[rgba(66,199,255,0.1)] border border-[rgba(66,199,255,0.3)] text-[#63E6FF] font-mono text-xs font-bold hover:bg-[rgba(66,199,255,0.2)] transition-all flex items-center gap-2"
+            >
+              <span>3D ARENA</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => navigate('/wargaming')}
               className="px-4 py-2 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold hover:bg-amber-500/30 transition-all flex items-center gap-2"
             >

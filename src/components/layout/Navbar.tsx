@@ -6,7 +6,8 @@ import { Menu, X, ChevronRight, User, Bell } from 'lucide-react'
 const NAV_LINKS = [
   { label: 'Overview',   to: '/' },
   { label: 'Scenarios',  to: '/scenarios' },
-  { label: 'Simulation', to: '/simulation' },
+  { label: '3D Arena',   to: '/simulation' },
+  { label: 'Wargame',    to: '/wargaming' },
   { label: 'Analytics',  to: '/analytics' },
   { label: 'Reports',    to: '/reports' },
 ]

@@ -52,6 +52,7 @@ export interface TurnResult {
   step_logs: string[]
   strategic_report?: string
   interpreted_command?: any
+  simulation_output?: any
   timestamp: string
 }
 

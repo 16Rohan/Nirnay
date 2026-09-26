@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import OverviewPage from './pages/OverviewPage'
 import WargamingPage from './pages/WargamingPage'
 import ScenariosPage from './pages/ScenariosPage'
+import Simulation from './pages/Simulation'
 import SimulationPage from './pages/SimulationPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import ReportsPage from './pages/ReportsPage'
@@ -24,7 +25,10 @@ export default function App() {
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/wargaming" element={<WargamingPage />} />
           <Route path="/scenarios" element={<ScenariosPage />} />
-          <Route path="/simulation" element={<SimulationPage />} />
+          {/* Standalone 3D simulation sandbox (mock engine) */}
+          <Route path="/simulation" element={<Simulation />} />
+          {/* Text-based wargame results inspector */}
+          <Route path="/simulation/results" element={<SimulationPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
         </Routes>

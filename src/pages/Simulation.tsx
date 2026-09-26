@@ -4,9 +4,15 @@ import { Activity, ArrowLeft, ChevronDown, Crosshair, Eye, Layers3, Maximize2, P
 import SimulationWorld, { type CameraMode } from '../components/simulation3d/World'
 import SimulationHUD from '../components/SimulationHUD'
 import { simulationSource } from '../simulation/mockEngine'
+import type { Entity, SimulationObjective } from '@/types/simulation_3d'
 import '../styles/simulation.css'
 
-const formatTime = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+const formatTime = (seconds: number) => {
+  const s = Math.max(0, Math.floor(seconds))
+  const mins = Math.floor(s / 60)
+  const secs = s % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
 const initialLayers = { terrain: true, units: true, routes: true, objectives: true, radar: true, infrastructure: true }
 const scenarios = [{ id: 'operation-horizon', name: 'Operation Horizon' }, { id: 'valley-sentinel', name: 'Valley Sentinel' }, { id: 'coastal-watch', name: 'Coastal Watch' }]
 
@@ -17,8 +23,8 @@ export default function Simulation() {
   const [scenarioOpen, setScenarioOpen] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true)
   const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
-  const selectedUnit = useMemo(() => state.entities.find(unit => unit.id === selected), [state.entities, selected])
-  const selectedObjective = useMemo(() => state.objectives.find(objective => objective.id === selected), [state.objectives, selected])
+  const selectedUnit = useMemo(() => state.entities.find((unit: Entity) => unit.id === selected), [state.entities, selected])
+  const selectedObjective = useMemo(() => state.objectives.find((objective: SimulationObjective) => objective.id === selected), [state.objectives, selected])
   useEffect(() => { simulationSource.start(); return () => undefined }, [])
   const toggleLayer = (key: keyof typeof layers) => setLayers(current => ({ ...current, [key]: !current[key] }))
 

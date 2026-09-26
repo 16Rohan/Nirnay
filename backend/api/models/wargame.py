@@ -73,6 +73,7 @@ class TurnResult(BaseModel):
     step_logs: List[str] = Field(default_factory=list)
     strategic_report: Optional[str] = None
     interpreted_command: Optional[Dict[str, Any]] = None
+    simulation_output: Optional[Dict[str, Any]] = None
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 

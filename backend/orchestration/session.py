@@ -278,7 +278,8 @@ class WargameSessionStore:
             decisions=decisions,
             step_logs=final_state.step_logs,
             strategic_report=final_state.strategic_report,
-            interpreted_command=interpreted_dict
+            interpreted_command=interpreted_dict,
+            simulation_output=sim.model_dump() if sim else None
         )
 
         session.turns.append(turn_result)
