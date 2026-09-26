@@ -77,13 +77,19 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
 
   return (
     <div
-      className="w-full h-full relative select-none overflow-hidden"
-      style={{
-        background: '#c8bfa0',  // Warm natural border/shadow around the map
-        borderRadius: '6px',
-        boxShadow: 'inset 0 0 0 3px #8a7850, 0 4px 16px rgba(0,0,0,0.35)',
-      }}
+      className="w-full h-full relative select-none overflow-hidden bg-[#040b12] flex items-center justify-center"
+      style={{ perspective: '2000px' }}
     >
+      <div
+        className="w-[130%] h-[130%] transition-transform duration-1000 ease-in-out"
+        style={{
+          transform: 'rotateX(55deg) rotateZ(-35deg) scale(0.95)',
+          transformStyle: 'preserve-3d',
+          background: '#c8bfa0',
+          borderRadius: '8px',
+          boxShadow: 'inset 0 0 0 3px #8a7850, 0 30px 60px rgba(0,0,0,0.6)',
+        }}
+      >
       {/* ── Map frame: cartographic border with coordinate labels ── */}
       <div
         className="absolute inset-0 pointer-events-none z-10"
@@ -264,6 +270,7 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
           {mapConfig.id} · NIRNAY TACTICAL SIM
         </text>
       </svg>
+      </div>
     </div>
   )
 }

@@ -462,26 +462,19 @@ def node_evaluation(state: WargameState) -> Dict[str, Any]:
     )
     elapsed = time.time() - t0
     source = "[yellow](Fallback)[/yellow]" if eval_out.dynamic.get("source") == "deterministic_fallback" else "[green](Live NIM LLM)[/green]"
-    status_str = "CONCLUDED" if eval_out.simulation_control.concluded else f"CONTINUE -> Scenario {eval_out.next_scenario.scenario_id}"
+    status_str = "EVALUATED"
     log = f"[EVALUATION] Completed outcome evaluation in {elapsed:.2f}s {source}. Decision: {status_str}"
     _log(f"   [EVALUATION] Strategic assessment in {elapsed:.2f}s {source}: {status_str}")
     _emit_stage_event("EVALUATION_COMPLETED", "evaluation", state, {
         "conclusion": eval_out.strategic_conclusion,
-        "concluded": eval_out.simulation_control.concluded,
-        "termination_reason": eval_out.simulation_control.termination_reason,
         "risks": eval_out.assessment.risks if eval_out.assessment else [],
         "duration_s": round(elapsed, 2)
     })
 
-    if eval_out.simulation_control.concluded:
-        _emit_stage_event("CAMPAIGN_TERMINATED", "evaluation", state, {
-            "reason": eval_out.simulation_control.termination_reason or "Operational limit reached"
-        })
-
     return {
         "evaluation_output": eval_out,
         "scenario_transition": transition,
-        "concluded": eval_out.simulation_control.concluded,
+        "concluded": False,  # Evaluation does not control campaign termination
         "step_logs": state.step_logs + [log]
     }
 

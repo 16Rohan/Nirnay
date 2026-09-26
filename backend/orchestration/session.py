@@ -35,7 +35,8 @@ class WargameSession:
         turn_duration: str,
         human_guidance: str,
         human_constraints: str,
-        seed: int = 42
+        seed: int = 42,
+        max_turns: int = 5
     ):
         self.session_id = session_id
         self.preset_id = preset_id
@@ -43,6 +44,7 @@ class WargameSession:
         self.human_guidance = human_guidance
         self.human_constraints = human_constraints
         self.seed = seed
+        self.max_turns = max_turns
         self.created_at = datetime.utcnow().isoformat()
         
         self.current_turn = 0
@@ -70,6 +72,7 @@ class WargameSessionStore:
         human_guidance: Optional[str] = None,
         human_constraints: Optional[str] = None,
         seed: int = 42,
+        max_turns: int = 5,
         session_id: Optional[str] = None
     ) -> WargameSession:
         preset = get_preset(preset_id)
@@ -83,7 +86,8 @@ class WargameSessionStore:
             turn_duration=turn_duration,
             human_guidance=guidance,
             human_constraints=constraints,
-            seed=seed
+            seed=seed,
+            max_turns=max_turns
         )
         self._sessions[final_session_id] = session
         return session
@@ -104,6 +108,7 @@ class WargameSessionStore:
                 turn_duration=s.turn_duration,
                 created_at=s.created_at,
                 total_turns=len(s.turns),
+                max_turns=s.max_turns,
                 turns=s.turns
             ))
         return overviews
@@ -161,7 +166,7 @@ class WargameSessionStore:
             scenario_id=scenario_id,
             parent_scenario_id=parent_id,
             iteration_count=turn_number,
-            max_iterations=10,  # Multi-turn campaign horizon
+            max_iterations=session.max_turns,  # Multi-turn campaign horizon
             human_guidance=guidance,
             turn_based=True,
             previous_simulation_output=prev_sim_output,
@@ -221,8 +226,8 @@ class WargameSessionStore:
                 if b_loss >= 100.0 or r_loss >= 100.0:
                     is_terminal = True
 
-        # Session concludes after 5 operational turns or terminal outcome
-        is_concluded = is_terminal or (turn_number >= 5)
+        # Session concludes after max_turns operational turns or terminal outcome
+        is_concluded = is_terminal or (turn_number >= session.max_turns)
         session.status = "concluded" if is_concluded else "awaiting_decision"
 
 

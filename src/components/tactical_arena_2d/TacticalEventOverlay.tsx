@@ -66,17 +66,19 @@ export const TacticalEventOverlay: React.FC<TacticalEventOverlayProps> = ({
             )}
 
             {/* ── Event info tag ── */}
-            <g transform="translate(16, -12)">
-              <rect x="0" y="0" width="120" height="18" rx="2"
-                fill="#ede5cc" stroke={isEngagement ? '#a03010' : isDestruction ? '#704030' : '#506090'}
-                strokeWidth="1" opacity="0.95" />
-              <text x="6" y="12"
-                fontFamily="'JetBrains Mono', monospace"
-                fontSize="8" fontWeight="600"
-                fill={isEngagement ? '#8a2010' : isDestruction ? '#604020' : '#405080'}
-              >
-                {evt.timestamp} · {evt.type}
-              </text>
+            <g style={{ transform: 'rotateZ(35deg) rotateX(-55deg)', transformOrigin: '0 0' }}>
+              <g transform="translate(16, -20)">
+                <rect x="0" y="0" width="120" height="18" rx="2"
+                  fill="#ede5cc" stroke={isEngagement ? '#a03010' : isDestruction ? '#704030' : '#506090'}
+                  strokeWidth="1" opacity="0.95" />
+                <text x="6" y="12"
+                  fontFamily="'JetBrains Mono', monospace"
+                  fontSize="8" fontWeight="600"
+                  fill={isEngagement ? '#8a2010' : isDestruction ? '#604020' : '#405080'}
+                >
+                  {evt.timestamp} · {evt.type}
+                </text>
+              </g>
             </g>
           </g>
         )

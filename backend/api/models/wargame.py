@@ -15,6 +15,7 @@ class ScenarioStartRequest(BaseModel):
     human_guidance: Optional[str] = None
     human_constraints: Optional[str] = None
     seed: int = 42
+    max_turns: int = 5
 
 
 class HumanCommandRequest(BaseModel):
@@ -86,4 +87,5 @@ class SessionOverview(BaseModel):
     turn_duration: str
     created_at: str
     total_turns: int
+    max_turns: int
     turns: List[TurnResult] = Field(default_factory=list)

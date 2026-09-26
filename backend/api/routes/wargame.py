@@ -71,6 +71,7 @@ async def init_session(request: ScenarioStartRequest):
         human_guidance=request.human_guidance,
         human_constraints=request.human_constraints,
         seed=request.seed,
+        max_turns=request.max_turns,
         session_id=request.session_id
     )
     return {"session_id": session.session_id, "preset_id": session.preset_id}
@@ -95,6 +96,7 @@ async def start_wargame(request: ScenarioStartRequest):
             human_guidance=request.human_guidance,
             human_constraints=request.human_constraints,
             seed=request.seed,
+            max_turns=request.max_turns,
             session_id=request.session_id
         )
 
