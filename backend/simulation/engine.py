@@ -262,7 +262,7 @@ class DeterministicSimulator:
             act_id = act_dict.get("action_id", "ACT-B-GEN")
             act_type = (act_dict.get("action_type") or "HOLD").upper()
             unit_id = act_dict.get("unit_id")
-            target = act_dict.get("target_location", "LOC-ALPHA")
+            target = act_dict.get("target_location") or blue_state.get(unit_id, {}).get("location") or "LOC-ALPHA"
 
             is_valid, reason, cost = self._validate_action(act_dict, "blue", blue_state, blue_res, hard_constraints=sim_input.hard_constraints)
             if not is_valid:
@@ -327,7 +327,7 @@ class DeterministicSimulator:
             act_id = act_dict.get("action_id", "ACT-R-GEN")
             act_type = (act_dict.get("action_type") or "HOLD").upper()
             unit_id = act_dict.get("unit_id")
-            target = act_dict.get("target_location", "LOC-BRAVO")
+            target = act_dict.get("target_location") or red_state.get(unit_id, {}).get("location") or "LOC-BRAVO"
 
             is_valid, reason, cost = self._validate_action(act_dict, "red", red_state, red_res)
             if not is_valid:
@@ -493,17 +493,14 @@ class DeterministicSimulator:
         river_level = env_assessment.get("river_level", "normal")
         weather_cond = str(env_assessment.get("weather", {}).get("condition", "Clear")).lower()
 
-        # River crossing impediment: if any Red unit is advancing toward a crossing location
-        red_crossing = any(
-            u.get("status") in ("ADVANCING",) and "BRAVO" in str(u.get("location", "")).upper()
-            for u in red_state.values()
-        )
-        if red_crossing and ("rain" in weather_cond or river_level in ("high", "flood")):
+        # Environmental shift / weather degradation: if adverse weather or low visibility
+        vis_km = float(env_assessment.get("visibility_km", 8.0))
+        if "rain" in weather_cond or "mud" in weather_cond or "snow" in weather_cond or vis_km <= 5.0 or river_level in ("high", "flood"):
             emergent_events.append({
-                "event_id": f"EVT-SIM-{sim_input.current_turn:02d}-RIVER",
+                "event_id": f"EVT-SIM-{sim_input.current_turn:02d}-ENV",
                 "type": "environmental_shift",
-                "description": "Rising river discharge impedes mechanized crossing without engineering assets.",
-                "impact": "Red offensive momentum slowed at river boundary."
+                "description": f"Adverse weather ({weather_cond}) and visibility ({vis_km}km) impede tactical movement.",
+                "impact": "Offensive momentum slowed and observation range degraded."
             })
 
         # Route degradation: triggered if heavy vehicle activity has occurred in prior turns

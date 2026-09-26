@@ -291,6 +291,7 @@ async def get_session_details(session_id: str):
         turn_duration=session.turn_duration,
         created_at=session.created_at,
         total_turns=len(session.turns),
+        max_turns=session.max_turns,
         turns=session.turns
     )
 

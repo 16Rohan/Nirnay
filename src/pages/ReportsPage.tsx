@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Shield, Crosshair, AlertTriangle, ArrowRight, Download, CheckCircle2 } from 'lucide-react'
 import { useWargameStore, TurnResult } from '../store/wargameStore'
+import { MarkdownRenderer } from '../components/MarkdownRenderer'
 
 export default function ReportsPage() {
   const navigate = useNavigate()
@@ -119,8 +120,8 @@ export default function ReportsPage() {
                   {activeReportTurn.strategic_report && (
                     <div>
                       <h3 className="text-xs font-mono text-emerald-400 uppercase font-bold mb-2">Synthesized Decision Dossier</h3>
-                      <div className="bg-[#02070D]/90 border border-slate-800 p-5 rounded-lg font-mono text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-sans">
-                        {activeReportTurn.strategic_report}
+                      <div className="bg-[#02070D]/90 border border-slate-800 p-5 rounded-lg">
+                        <MarkdownRenderer content={activeReportTurn.strategic_report} />
                       </div>
                     </div>
                   )}

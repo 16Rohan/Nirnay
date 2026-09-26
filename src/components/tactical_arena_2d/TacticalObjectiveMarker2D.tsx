@@ -8,11 +8,9 @@ interface ObjectiveMarkerProps {
 }
 
 /**
- * Cartographic objective marker.
- * - Natural fill colors (not neon/glowing) that reflect the map palette
- * - State-differentiated: SECURED (olive green), CONTESTED (amber/red), UNSECURED (blue), FAILED (grey)
- * - Dashed perimeter zone circle
- * - Clean crosshair center glyph
+ * Cartographic objective marker for dark command map.
+ * - State-differentiated: SECURED (emerald green), CONTESTED (crimson red), UNSECURED (cyan blue), FAILED (slate)
+ * - High-contrast text labels with dark outline halos
  */
 export const TacticalObjectiveMarker2D: React.FC<ObjectiveMarkerProps> = ({
   objective,
@@ -25,32 +23,31 @@ export const TacticalObjectiveMarker2D: React.FC<ObjectiveMarkerProps> = ({
   const isFailed = objective.state === 'FAILED'
   const isMonitored = objective.state === 'MONITORED'
 
-  // State-based color palette: all muted/natural, no neon
   const zoneStroke = isSecured
-    ? '#2a6a30'    // Muted olive green
+    ? '#2e7d32'    // Restrained green
     : isContested
-    ? '#b04010'    // Amber-red
+    ? '#d32f2f'    // Restrained red
     : isFailed
-    ? '#6a6050'    // Muted grey-brown
+    ? '#64748b'    // Slate grey
     : isMonitored
-    ? '#5a7aaa'    // Slate blue
-    : '#2a5a8a'    // Blue-grey
+    ? '#4a90e2'    // Restrained blue
+    : '#3173a1'    // Muted blue
 
   const zoneFill = isSecured
-    ? 'rgba(40,100,40,0.10)'
+    ? 'rgba(46,125,50,0.12)'
     : isContested
-    ? 'rgba(160,60,16,0.10)'
+    ? 'rgba(211,47,47,0.12)'
     : isFailed
-    ? 'rgba(100,90,70,0.08)'
-    : 'rgba(40,80,140,0.08)'
+    ? 'rgba(100,116,139,0.10)'
+    : 'rgba(74,144,226,0.10)'
 
   const centerFill = isSecured
-    ? '#2a6a30'
+    ? '#2e7d32'
     : isContested
-    ? '#b04010'
+    ? '#d32f2f'
     : isFailed
-    ? '#6a6050'
-    : '#2a5a8a'
+    ? '#64748b'
+    : '#3173a1'
 
   const stateLabel = isSecured
     ? 'SECURED'
@@ -61,14 +58,6 @@ export const TacticalObjectiveMarker2D: React.FC<ObjectiveMarkerProps> = ({
     : isMonitored
     ? 'MONITORED'
     : 'UNSECURED'
-
-  const stateLabelColor = isSecured
-    ? '#1a5a20'
-    : isContested
-    ? '#903010'
-    : isFailed
-    ? '#505040'
-    : '#1a4070'
 
   return (
     <g
@@ -98,77 +87,63 @@ export const TacticalObjectiveMarker2D: React.FC<ObjectiveMarkerProps> = ({
           cy="0"
           r={objective.radius + 5}
           fill="none"
-          stroke="#c07820"
+          stroke="#f59e0b"
           strokeWidth="1.5"
           strokeDasharray="4 4"
-          opacity="0.7"
+          opacity="0.85"
         />
       )}
 
-      <g style={{ transform: 'rotateZ(35deg) rotateX(-55deg)', transformOrigin: '0 0' }}>
-        <g transform="translate(0, -12)">
-          {/* Objective center glyph: bullseye crosshair */}
-          {/* Outer ring */}
-          <circle cx="0" cy="0" r="10" fill="#f0e8d8" stroke={zoneStroke} strokeWidth="1.8" />
-          {/* Inner dot */}
-          <circle cx="0" cy="0" r="3.5" fill={centerFill} />
-          {/* Crosshair ticks */}
-          <line x1="-14" y1="0" x2="-10" y2="0" stroke={zoneStroke} strokeWidth="1.5" />
-          <line x1="10" y1="0" x2="14" y2="0" stroke={zoneStroke} strokeWidth="1.5" />
-          <line x1="0" y1="-14" x2="0" y2="-10" stroke={zoneStroke} strokeWidth="1.5" />
-          <line x1="0" y1="10" x2="0" y2="14" stroke={zoneStroke} strokeWidth="1.5" />
+      {/* Objective center glyph: bullseye crosshair */}
+      <circle cx="0" cy="0" r="8" fill="#0f172a" stroke={zoneStroke} strokeWidth="1.8" />
+      <circle cx="0" cy="0" r="3" fill={centerFill} />
+      {/* Crosshair ticks */}
+      <line x1="-12" y1="0" x2="-8" y2="0" stroke={zoneStroke} strokeWidth="1.5" />
+      <line x1="8" y1="0" x2="12" y2="0" stroke={zoneStroke} strokeWidth="1.5" />
+      <line x1="0" y1="-12" x2="0" y2="-8" stroke={zoneStroke} strokeWidth="1.5" />
+      <line x1="0" y1="8" x2="0" y2="12" stroke={zoneStroke} strokeWidth="1.5" />
 
-          {/* Objective name tag below zone */}
-          <rect
-            x={-(objective.name.length * 3.0 + 8)}
-            y="18"
-            width={objective.name.length * 6.0 + 16}
-            height="18"
-            rx="2"
-            fill="#f0e8d8"
-            stroke={zoneStroke}
-            strokeWidth="1"
-            opacity="0.95"
-          />
-          <text
-            x="0"
-            y="30"
-            textAnchor="middle"
-            fontFamily="'JetBrains Mono', monospace"
-            fontSize="8.5"
-            fontWeight="700"
-            fill="#2a2010"
-            letterSpacing="0.3"
-          >
-            {objective.name.length > 22 ? objective.name.substring(0, 22) + '…' : objective.name}
-          </text>
+      {/* State badge directly above */}
+      <rect
+        x={-(stateLabel.length * 2.8 + 4)}
+        y="-24"
+        width={stateLabel.length * 5.6 + 8}
+        height="10"
+        rx="2"
+        fill={zoneStroke}
+        opacity="0.9"
+      />
+      <text
+        x="0"
+        y="-16"
+        textAnchor="middle"
+        fontFamily="'JetBrains Mono', monospace"
+        fontSize="7"
+        fontWeight="700"
+        fill="#ffffff"
+        letterSpacing="0.5"
+      >
+        {stateLabel}
+      </text>
 
-          {/* State badge above zone */}
-          <rect
-            x={-(stateLabel.length * 3.2 + 4)}
-            y="-24"
-            width={stateLabel.length * 6.4 + 8}
-            height="14"
-            rx="2"
-            fill={isContested ? '#b04010' : isSecured ? '#2a6a30' : '#f0e8d8'}
-            stroke={zoneStroke}
-            strokeWidth="0.8"
-            opacity="0.92"
-          />
-          <text
-            x="0"
-            y="-13"
-            textAnchor="middle"
-            fontFamily="'JetBrains Mono', monospace"
-            fontSize="8"
-            fontWeight="700"
-            fill={isContested || isSecured ? '#ffffff' : stateLabelColor}
-            letterSpacing="0.5"
-          >
-            {stateLabel}
-          </text>
-        </g>
-      </g>
+      {/* Objective name below */}
+      <text
+        x="0"
+        y="20"
+        textAnchor="middle"
+        fontFamily="'JetBrains Mono', monospace"
+        fontSize="9"
+        fontWeight="700"
+        fill="#f8fafc"
+        letterSpacing="0.3"
+        style={{
+          paintOrder: 'stroke',
+          stroke: '#020617',
+          strokeWidth: '3px',
+        }}
+      >
+        {objective.name.length > 22 ? objective.name.substring(0, 22) + '…' : objective.name}
+      </text>
     </g>
   )
 }

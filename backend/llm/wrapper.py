@@ -9,6 +9,7 @@ import re
 import json
 import time
 import logging
+import json_repair
 from typing import Type, TypeVar, Optional, Any, Dict
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -92,7 +93,7 @@ def get_client_for_role(role: str) -> OpenAI:
 
 def extract_json_from_text(text: str) -> dict:
     """
-    Robust JSON extractor from LLM markdown fences, outer braces, or raw strings.
+    Robust JSON extractor using json_repair to handle malformed LLM outputs.
     Automatically handles duplicate leading braces, unwraps 'properties', and extracts outermost valid dict.
     """
     cleaned = text.strip()
@@ -106,40 +107,28 @@ def extract_json_from_text(text: str) -> dict:
     if re.match(r"^\s*\{\s*\{", cleaned):
         cleaned = re.sub(r"^\s*\{\s*\{", "{", cleaned, count=1)
 
-    # 2. Direct parse
+    # 2. Extract using json_repair
     try:
-        val = json.loads(cleaned)
+        val = json_repair.loads(cleaned)
         if isinstance(val, dict):
             return _unwrap(val)
-    except json.JSONDecodeError:
-        pass
+    except Exception as e:
+        logger.warning(f"json_repair.loads failed: {e}")
 
     # 3. Strict ```json ... ``` blocks
-    json_blocks = re.findall(r"```json\s*([\s\S]*?)\s*```", cleaned, re.IGNORECASE)
+    json_blocks = re.findall(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned, re.IGNORECASE)
     for block in json_blocks:
         b_str = block.strip()
         if re.match(r"^\s*\{\s*\{", b_str):
             b_str = re.sub(r"^\s*\{\s*\{", "{", b_str, count=1)
         try:
-            val = json.loads(b_str)
+            val = json_repair.loads(b_str)
             if isinstance(val, dict):
                 return _unwrap(val)
-        except json.JSONDecodeError:
+        except Exception:
             pass
 
-    # 4. Any code block that might contain JSON
-    all_blocks = re.findall(r"```(?:\w+)?\s*([\s\S]*?)\s*```", cleaned)
-    for block in all_blocks:
-        b_strip = block.strip()
-        if b_strip.startswith("{") and b_strip.endswith("}"):
-            try:
-                val = json.loads(b_strip)
-                if isinstance(val, dict):
-                    return _unwrap(val)
-            except json.JSONDecodeError:
-                pass
-
-    # 5. Outermost brace boundary extraction
+    # 4. Outermost brace boundary extraction with repair
     end = cleaned.rfind("}")
     if end != -1:
         start_idx = 0
@@ -149,46 +138,12 @@ def extract_json_from_text(text: str) -> dict:
                 break
             candidate = cleaned[start:end+1]
             try:
-                parsed = json.loads(candidate)
+                parsed = json_repair.loads(candidate)
                 if isinstance(parsed, dict):
                     return _unwrap(parsed)
-            except json.JSONDecodeError:
+            except Exception:
                 pass
             start_idx = start + 1
-
-    # 6. Attempt auto-closing truncated JSON
-    start = cleaned.find("{")
-    if start != -1:
-        truncated = cleaned[start:]
-        stack = []
-        in_string = False
-        escaped = False
-        buffer = []
-        for ch in truncated:
-            buffer.append(ch)
-            if ch == "\\" and not escaped:
-                escaped = True
-                continue
-            if ch == '"' and not escaped:
-                in_string = not in_string
-            elif not in_string:
-                if ch in ("{", "["):
-                    stack.append("}" if ch == "{" else "]")
-                elif ch in ("}", "]"):
-                    if stack and stack[-1] == ch:
-                        stack.pop()
-            escaped = False
-        if in_string:
-            buffer.append('"')
-        while stack:
-            buffer.append(stack.pop())
-        repaired = "".join(buffer)
-        try:
-            parsed = json.loads(repaired)
-            if isinstance(parsed, dict):
-                return _unwrap(parsed)
-        except json.JSONDecodeError:
-            pass
 
     raise ValueError(f"Unable to extract valid JSON from LLM response:\n{text[:300]}...")
 

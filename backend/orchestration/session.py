@@ -169,6 +169,7 @@ class WargameSessionStore:
             max_iterations=session.max_turns,  # Multi-turn campaign horizon
             human_guidance=guidance,
             turn_based=True,
+            seed=session.seed,
             previous_simulation_output=prev_sim_output,
             previous_blue_output=session.last_state.blue_output if session.last_state else None,
             previous_red_output=session.last_state.red_output if session.last_state else None,

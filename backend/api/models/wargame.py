@@ -87,5 +87,5 @@ class SessionOverview(BaseModel):
     turn_duration: str
     created_at: str
     total_turns: int
-    max_turns: int
+    max_turns: int = 5
     turns: List[TurnResult] = Field(default_factory=list)

@@ -28,13 +28,41 @@ export const LOCATION_MAP_2D: Record<string, Position2D> = {
   'EASTERN AIRFIELD': { x: 1020, y: 300 },
 }
 
-export function resolveLocation2D(loc?: string, fallback: Position2D = { x: 600, y: 400 }): Position2D {
+export function resolveLocation2D(loc?: any, fallback: Position2D = { x: 600, y: 400 }): Position2D {
   if (!loc) return fallback
-  const upper = loc.toUpperCase().trim()
-  if (LOCATION_MAP_2D[upper]) return LOCATION_MAP_2D[upper]
-  for (const [key, coords] of Object.entries(LOCATION_MAP_2D)) {
-    if (upper.includes(key)) return coords
+
+  if (typeof loc === 'string') {
+    const upper = loc.toUpperCase().trim()
+    if (LOCATION_MAP_2D[upper]) return LOCATION_MAP_2D[upper]
+    for (const [key, coords] of Object.entries(LOCATION_MAP_2D)) {
+      if (upper.includes(key)) return coords
+    }
+    return fallback
   }
+
+  if (typeof loc === 'object') {
+    if (typeof loc.x === 'number' && typeof loc.y === 'number') {
+      return { x: loc.x, y: loc.y }
+    }
+    if (Array.isArray(loc) && loc.length >= 2) {
+      if (typeof loc[0] === 'number' && typeof loc[1] === 'number') {
+        if (loc.length === 3) {
+          return convert3DTo2D(loc as [number, number, number])
+        }
+        return { x: loc[0], y: loc[1] }
+      }
+    }
+    if (typeof loc.name === 'string') {
+      return resolveLocation2D(loc.name, fallback)
+    }
+    if (typeof loc.location === 'string') {
+      return resolveLocation2D(loc.location, fallback)
+    }
+    if (typeof loc.id === 'string') {
+      return resolveLocation2D(loc.id, fallback)
+    }
+  }
+
   return fallback
 }
 

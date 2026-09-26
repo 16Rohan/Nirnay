@@ -10,6 +10,7 @@ import time
 from typing import Dict, Any, Literal, Optional, List
 from langgraph.graph import StateGraph, START, END
 from rich import print as rprint
+from rich.text import Text
 
 from backend.orchestration.state import WargameState
 from backend.schemas.contracts import (
@@ -123,9 +124,10 @@ def is_termination_active(state: WargameState) -> bool:
 
 def _log(msg: str):
     rprint(msg)
+    plain_msg = Text.from_markup(msg).plain
     for listener in list(_log_listeners):
         try:
-            listener(msg)
+            listener(plain_msg)
         except Exception:
             pass
 
@@ -146,7 +148,7 @@ def node_load_context(state: WargameState) -> Dict[str, Any]:
     log = f"[MEMORY] Resolved logical context for Scenario {state.scenario_id} (Token estimate: {resolved.token_estimate})"
     _log(f"   [MEMORY] Context assembled: {len(resolved.context)} dimensions loaded.")
     _emit_stage_event("CONTEXT_LOADED", "context", state, {"token_estimate": resolved.token_estimate, "dimensions": len(resolved.context)})
-    return {"context": resolved, "step_logs": state.step_logs + [log]}
+    return {"context": resolved, "step_logs": [log]}
 
 
 def node_orchestrator(state: WargameState) -> Dict[str, Any]:
@@ -183,7 +185,7 @@ def node_orchestrator(state: WargameState) -> Dict[str, Any]:
         "red_forces": len(contract.forces.get("red", [])),
         "duration_s": round(elapsed, 2)
     })
-    return {"scenario_contract": contract, "step_logs": state.step_logs + [log]}
+    return {"scenario_contract": contract, "step_logs": [log]}
 
 
 def node_validate_contract(state: WargameState) -> Dict[str, Any]:
@@ -192,17 +194,28 @@ def node_validate_contract(state: WargameState) -> Dict[str, Any]:
     if not is_valid:
         log = f"[VALIDATION] CONTRACT FAILED validation with {len(violations)} errors: {violations}"
         _log(f"   [VALIDATION] FAILED: {violations}")
-        return {"validation_passed": False, "validation_errors": violations, "step_logs": state.step_logs + [log]}
+        return {"validation_passed": False, "validation_errors": violations, "step_logs": [log]}
     log = f"[VALIDATION] Scenario Contract {state.scenario_contract.scenario_id} passed all deterministic constraints."
     _log(f"   [VALIDATION] Passed: All hard constraints satisfied.")
-    return {"validation_passed": True, "validation_errors": [], "step_logs": state.step_logs + [log]}
+    return {"validation_passed": True, "validation_errors": [], "step_logs": [log]}
 
 
-# node_materialize_scenario REMOVED: its output was never stored in WargameState
-# and was therefore never consumed by node_simulation. The force state is already
-# carried correctly through scenario_contract (overwritten with prev_final_state
-# in node_orchestrator for Turn N>1). Removing this dead node saves one compute
-# call per turn and eliminates the misleading log entry.
+def node_scenario_generator(state: WargameState) -> Dict[str, Any]:
+    _emit_stage_event("GENERATOR_STARTED", "generator", state)
+    _log(f"[bold cyan]>> [SCENARIO GENERATOR][/bold cyan] Materializing concrete simulation state...")
+    t0 = time.time()
+    sim_state = generator.materialize(state.scenario_contract, seed=state.seed + state.iteration_count)
+    elapsed = time.time() - t0
+    b_count = len(sim_state.get("blue_forces", {}))
+    r_count = len(sim_state.get("red_forces", {}))
+    log = f"[SCENARIO GENERATOR] Materialized deterministic simulation state ({b_count} Blue unit(s), {r_count} Red unit(s))"
+    _log(f"   [SCENARIO GENERATOR] State instantiated in {elapsed:.2f}s: {b_count} Blue unit(s), {r_count} Red unit(s).")
+    _emit_stage_event("GENERATOR_COMPLETED", "generator", state, {
+        "blue_count": b_count,
+        "red_count": r_count,
+        "duration_s": round(elapsed, 2)
+    })
+    return {"step_logs": [log]}
 
 
 def node_environment(state: WargameState) -> Dict[str, Any]:
@@ -220,7 +233,7 @@ def node_environment(state: WargameState) -> Dict[str, Any]:
         "provenance": env_out.dynamic,
         "duration_s": round(elapsed, 2)
     })
-    return {"environment_output": env_out, "step_logs": state.step_logs + [log]}
+    return {"environment_output": env_out, "step_logs": [log]}
 
 
 def node_blue_team(state: WargameState) -> Dict[str, Any]:
@@ -256,7 +269,7 @@ def node_blue_team(state: WargameState) -> Dict[str, Any]:
         return {
             "blue_output": blue_out,
             "previous_blue_output": blue_out,
-            "step_logs": state.step_logs + [log]
+            "step_logs": [log]
         }
 
     _log(f"[bold dodger_blue1]>> [BLUE TEAM][/bold dodger_blue1] Generating friendly Course of Action (COA)...")
@@ -283,7 +296,7 @@ def node_blue_team(state: WargameState) -> Dict[str, Any]:
     return {
         "blue_output": blue_out,
         "previous_blue_output": blue_out,
-        "step_logs": state.step_logs + [log]
+        "step_logs": [log]
     }
 
 
@@ -323,14 +336,14 @@ def node_red_team(state: WargameState) -> Dict[str, Any]:
         return {
             "red_output": red_out,
             "previous_red_output": red_out,
-            "step_logs": state.step_logs + [log]
+            "step_logs": [log]
         }
 
     _log(f"[bold red]>> [RED TEAM][/bold red] Generating adaptive adversarial response...")
     red_out = red_agent.plan_response(
         contract=state.scenario_contract,
         env_assessment=state.environment_output,
-        blue_coa=state.blue_output,
+        blue_coa=state.previous_blue_output,
         previous_sim_output=state.previous_simulation_output,
         previous_red_output=state.previous_red_output,
     )
@@ -351,7 +364,7 @@ def node_red_team(state: WargameState) -> Dict[str, Any]:
     return {
         "red_output": red_out,
         "previous_red_output": red_out,
-        "step_logs": state.step_logs + [log]
+        "step_logs": [log]
     }
 
 
@@ -416,7 +429,7 @@ def node_simulation(state: WargameState) -> Dict[str, Any]:
         time_horizon=contract.metadata.time_horizon,
         # Use iteration_count as seed offset so each turn is reproducible but unique.
         # The DeterministicSimulator further multiplies: turn_seed = seed + turn * 101
-        seed=state.iteration_count,
+        seed=state.seed + state.iteration_count,
         special_events=special_events,
         human_intent=human_intent_dict,
         hard_constraints=hard_constraints
@@ -447,7 +460,7 @@ def node_simulation(state: WargameState) -> Dict[str, Any]:
         "duration_s": round(elapsed, 2)
     })
 
-    return {"simulation_input": sim_input, "simulation_output": sim_out, "step_logs": state.step_logs + [log]}
+    return {"simulation_input": sim_input, "simulation_output": sim_out, "step_logs": [log]}
 
 
 def node_evaluation(state: WargameState) -> Dict[str, Any]:
@@ -475,7 +488,7 @@ def node_evaluation(state: WargameState) -> Dict[str, Any]:
         "evaluation_output": eval_out,
         "scenario_transition": transition,
         "concluded": False,  # Evaluation does not control campaign termination
-        "step_logs": state.step_logs + [log]
+        "step_logs": [log]
     }
 
 
@@ -521,7 +534,7 @@ def node_persist_memory(state: WargameState) -> Dict[str, Any]:
     writer.write(write_contract)
     log = f"[PERSISTENT MEMORY] Appended scenario {state.scenario_id} outcomes to persistent strategic markdown records."
     _log(f"   [PERSISTENT MEMORY] Memory updated in 'memory/scenarios/{state.scenario_id}.md'")
-    return {"step_logs": state.step_logs + [log]}
+    return {"step_logs": [log]}
 
 
 def node_prepare_next_iteration(state: WargameState) -> Dict[str, Any]:
@@ -536,7 +549,7 @@ def node_prepare_next_iteration(state: WargameState) -> Dict[str, Any]:
         "parent_scenario_id": parent_id,
         "iteration_count": state.iteration_count + 1,
         "previous_simulation_output": state.simulation_output,
-        "step_logs": state.step_logs + [log]
+        "step_logs": [log]
     }
 
 
@@ -587,7 +600,7 @@ def node_generate_report(state: WargameState) -> Dict[str, Any]:
 
     report_text = "\n".join(report_lines)
     log = f"[REPORT AGENT] Final Strategic Decision Report compiled."
-    return {"strategic_report": report_text, "step_logs": state.step_logs + [log]}
+    return {"strategic_report": report_text, "step_logs": [log]}
 
 
 def router_check_continuation(state: WargameState) -> Literal["continue_loop", "conclude"]:
@@ -606,7 +619,7 @@ def create_wargame_graph():
     graph.add_node("load_context", node_load_context)
     graph.add_node("orchestrator", node_orchestrator)
     graph.add_node("validate_contract", node_validate_contract)
-    # materialize_scenario removed: was a dead node (output never stored/consumed)
+    graph.add_node("scenario_generator", node_scenario_generator)
     graph.add_node("environment", node_environment)
     graph.add_node("blue_team", node_blue_team)
     graph.add_node("red_team", node_red_team)
@@ -620,11 +633,11 @@ def create_wargame_graph():
     graph.add_edge(START, "load_context")
     graph.add_edge("load_context", "orchestrator")
     graph.add_edge("orchestrator", "validate_contract")
-    # validate_contract → environment (materialize_scenario removed from pipeline)
-    graph.add_edge("validate_contract", "environment")
+    graph.add_edge("validate_contract", "scenario_generator")
+    graph.add_edge("scenario_generator", "environment")
     graph.add_edge("environment", "blue_team")
-    graph.add_edge("blue_team", "red_team")
-    graph.add_edge("red_team", "simulation")
+    graph.add_edge("environment", "red_team")
+    graph.add_edge(["blue_team", "red_team"], "simulation")
     graph.add_edge("simulation", "evaluation")
     graph.add_edge("evaluation", "persist_memory")
 

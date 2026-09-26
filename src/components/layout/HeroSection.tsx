@@ -4,11 +4,6 @@ import { NavLink } from 'react-router-dom'
 import {
   ChevronRight,
   ChevronDown,
-  Globe,
-  Layers,
-  Cloud,
-  TrendingUp,
-  Camera,
   Cpu,
   MapPin,
   Shield,
@@ -51,17 +46,7 @@ const BOTTOM_FEATURE_CARDS = [
   },
 ]
 
-/* ── Right Floating Toolbar Items (ZONE E) ── */
-const TOOLBAR_ITEMS = [
-  { id: 'map', icon: Globe, label: '3D MAP' },
-  { id: 'layers', icon: Layers, label: 'LAYERS' },
-  { id: 'weather', icon: Cloud, label: 'WEATHER' },
-  { id: 'trajectory', icon: TrendingUp, label: 'TRAJECTORY' },
-  { id: 'camera', icon: Camera, label: 'CAMERA' },
-]
-
 export default function HeroSection() {
-  const [activeTool, setActiveTool] = useState<string>('map')
   const sectionRef = useRef<HTMLElement>(null)
 
   /* Subtle Parallax Values */
@@ -362,42 +347,7 @@ export default function HeroSection() {
         </motion.div>
       </motion.div>
 
-      {/* ════════════════════════════════════════════════════════════
-         ZONE E: RIGHT CONTROL TOOLBAR (Extreme Right Safe Area)
-         ════════════════════════════════════════════════════════════ */}
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
-        className="fixed right-4 lg:right-6 top-1/2 -translate-y-1/2 z-30 hidden sm:flex flex-col gap-2 p-2 rounded-xl
-                   bg-[rgba(3,15,27,0.65)] border border-[rgba(50,180,255,0.28)] backdrop-blur-md
-                   shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
-      >
-        {TOOLBAR_ITEMS.map(({ id, icon: Icon, label }) => {
-          const isActive = activeTool === id
-          return (
-            <button
-              key={id}
-              onClick={() => setActiveTool(id)}
-              className={`relative flex flex-col items-center justify-center w-14 h-12 py-2 px-1 rounded-lg
-                         transition-all duration-200 group ${
-                           isActive
-                             ? 'bg-[rgba(22,140,255,0.22)] border border-[rgba(66,199,255,0.4)] text-[#42C7FF] shadow-[0_0_12px_rgba(66,199,255,0.25)]'
-                             : 'text-[#71869A] hover:text-white hover:bg-[rgba(22,140,255,0.08)]'
-                         }`}
-              aria-label={label}
-            >
-              <Icon className="w-4 h-4 mb-1 transition-transform group-hover:scale-110" />
-              <span className="font-mono text-[8px] font-semibold tracking-wider text-center leading-none">
-                {label}
-              </span>
-              {isActive && (
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#42C7FF] rounded-l-full shadow-[0_0_8px_#42C7FF]" />
-              )}
-            </button>
-          )
-        })}
-      </motion.div>
+
 
       {/* ════════════════════════════════════════════════════════════
          ZONE F: BOTTOM FEATURE CARDS SYSTEM (Coherent Horizontal Grid)

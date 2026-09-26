@@ -12,8 +12,8 @@ interface TacticalSymbolProps {
  * Professional military symbol using NIRNAY visual language.
  * - Ground forces: rectangular tactical frame + NATO-derived glyph (APP-06 inspired)
  * - Air forces: diamond frame + aircraft top-down silhouette
- * - Formation footprint: scaled ▪ grid below the frame, communicates troop strength visually
- * - NO cyberpunk glow. NO neon colors. Restrained military palette.
+ * - Visual troop strength visual footprint
+ * - Restrained dark-mode military command palette (crisp contrast)
  */
 export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
   entity,
@@ -26,36 +26,34 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
   const isDamaged = entity.status === 'DAMAGED'
   const isAir = entity.category === 'AIR'
 
-  // ── Palette: Restrained military standard ──
-  // Blue force: deep classic blue
-  // Red force: muted brick red
-  // All: dark outlines, off-white labels
+  // ── Palette: High-contrast Dark Command Tactical ──
+  // Blue force: Restrained friendly blue frame, deep tactical blue fill
+  // Red force: Restrained hostile red frame, deep tactical red fill
   const frameStroke = isDestroyed
-    ? '#707070'
+    ? '#64748b'
     : isBlue
-    ? '#1a4080'   // Deep blue – restrained
-    : '#9a2020'   // Brick red – restrained
+    ? '#4a90e2'   // Restrained friendly blue
+    : '#d32f2f'   // Restrained hostile red
 
   const frameFill = isDestroyed
-    ? '#d0ccc0'
+    ? '#1e293b'
     : isBlue
-    ? '#dce8f8'   // Very pale blue tint – cartographic style
-    : '#f5dcdc'   // Very pale red tint
+    ? '#163a5f'   // Deep tactical blue fill
+    : '#5c1616'   // Deep tactical red fill
 
   const glyphColor = isDestroyed
-    ? '#888'
+    ? '#64748b'
     : isBlue
-    ? '#1a4080'
-    : '#9a2020'
+    ? '#4a90e2'
+    : '#d32f2f'
 
-  const labelFill = isDestroyed ? '#888' : '#1a1a1a'
+  const labelFill = isDestroyed ? '#64748b' : '#f8fafc'
 
   // ── Unit tactical glyph (inside frame) ──
   const renderGlyph = () => {
     if (isDestroyed) {
-      // Destroyed: large X
       return (
-        <g stroke="#b03030" strokeWidth="2.5" strokeLinecap="round">
+        <g stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round">
           <line x1="-9" y1="-7" x2="9" y2="7" />
           <line x1="9" y1="-7" x2="-9" y2="7" />
         </g>
@@ -64,7 +62,6 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
 
     switch (entity.unitClass) {
       case 'INFANTRY':
-        // Crossed diagonal lines (NATO infantry standard)
         return (
           <g stroke={glyphColor} strokeWidth="2" strokeLinecap="round">
             <line x1="-9" y1="-7" x2="9" y2="7" />
@@ -72,12 +69,10 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
           </g>
         )
       case 'ARMORED':
-        // Oval track (NATO armor standard)
         return (
           <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="none" stroke={glyphColor} strokeWidth="2" />
         )
       case 'MECHANIZED':
-        // Oval + crossed diagonals (mech infantry)
         return (
           <g stroke={glyphColor} strokeWidth="1.8">
             <ellipse cx="0" cy="0" rx="9" ry="5.5" fill="none" />
@@ -86,10 +81,8 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
           </g>
         )
       case 'ARTILLERY':
-        // Solid dot (NATO artillery standard)
         return <circle cx="0" cy="0" r="4" fill={glyphColor} />
       case 'COMMAND':
-        // CP flag glyph
         return (
           <g stroke={glyphColor} strokeWidth="1.8" fill="none">
             <line x1="-7" y1="7" x2="-7" y2="-8" strokeWidth="2" />
@@ -97,7 +90,6 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
           </g>
         )
       case 'UAV':
-        // Top-down drone silhouette: X-wing shape
         return (
           <g fill={glyphColor} transform={`rotate(${entity.heading || 0})`}>
             <ellipse cx="0" cy="0" rx="3" ry="7" />
@@ -107,19 +99,14 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
         )
       case 'FIGHTER':
       case 'INTERCEPTOR':
-        // Top-down jet silhouette
         return (
           <g fill={glyphColor} transform={`rotate(${entity.heading || 0})`}>
-            {/* Fuselage */}
             <ellipse cx="0" cy="0" rx="2.5" ry="10" />
-            {/* Delta wings */}
             <polygon points="0,-2 10,4 0,6 -10,4" />
-            {/* Tail fins */}
             <polygon points="0,8 4,12 -4,12" />
           </g>
         )
       case 'HELICOPTER':
-        // Top-down rotary silhouette
         return (
           <g stroke={glyphColor} fill={glyphColor} transform={`rotate(${entity.heading || 0})`}>
             <circle cx="0" cy="0" r="3" />
@@ -132,44 +119,46 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
     }
   }
 
-  // ── Formation footprint: grid of small ▪ squares scaled by elementCount ──
-  // This communicates troop strength visually without requiring the user to read numbers
-  const renderFormationFootprint = () => {
-    if (isAir || isDestroyed || entity.strength.elementCount <= 1) return null
-
-    const dots: React.ReactNode[] = []
-    const n = entity.strength.elementCount
-    const cols = Math.min(5, Math.ceil(Math.sqrt(n)))
-    const rows = Math.ceil(n / cols)
-    const spacing = 6.5
-    const dotSize = 2.8
-
+  // ── Formation Strength Blocks ──
+  const renderStrengthBlocks = () => {
+    if (isAir || isDestroyed || entity.strength.elementCount < 1) return null
+    const n = Math.min(12, entity.strength.elementCount)
+    const blockWidth = 4
+    const blockHeight = 4.5
+    const spacing = 1.2
+    
+    const cols = Math.min(6, n)
+    const rows = Math.ceil(n / 6)
+    
+    const blocks: React.ReactNode[] = []
+    
     for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const idx = r * cols + c
-        if (idx < n) {
-          const ox = (c - (cols - 1) / 2) * spacing
-          const oy = (r - (rows - 1) / 2) * spacing + 20
-          dots.push(
-            <rect
-              key={idx}
-              x={ox - dotSize / 2}
-              y={oy - dotSize / 2}
-              width={dotSize}
-              height={dotSize}
-              fill={isBlue ? '#2050a0' : '#a02020'}
-              opacity={isDamaged ? 0.45 : 0.80}
-              rx="0.5"
-            />
-          )
-        }
+      const rowCols = r === rows - 1 && n % 6 !== 0 ? n % 6 : 6
+      const rowW = rowCols * blockWidth + (rowCols - 1) * spacing
+      const startX = -rowW / 2
+      const yPos = 13 + r * (blockHeight + spacing)
+      
+      for (let c = 0; c < rowCols; c++) {
+        blocks.push(
+          <rect
+            key={`${r}-${c}`}
+            x={startX + c * (blockWidth + spacing)}
+            y={yPos}
+            width={blockWidth}
+            height={blockHeight}
+            fill={isBlue ? '#4a90e2' : '#d32f2f'}
+            opacity={isDamaged ? 0.5 : 0.95}
+            stroke="#020617"
+            strokeWidth="0.4"
+          />
+        )
       }
     }
-    return <g className="formation-footprint">{dots}</g>
+    
+    return <g className="formation-strength-blocks">{blocks}</g>
   }
 
-  // ── Echelon size modifier (hash marks above frame) ──
-  // More marks = larger unit
+  // ── Echelon size modifier ──
   const renderEchelon = () => {
     if (isAir || isDestroyed) return null
     const n = entity.strength.elementCount
@@ -194,35 +183,6 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
     )
   }
 
-  // ── Strength bar under frame ──
-  const renderStrengthBar = () => {
-    if (isDestroyed) return null
-    const pct = Math.max(0, Math.min(100, entity.strength.currentStrength))
-    const totalW = 28
-    const filledW = (pct / 100) * totalW
-    const barY = isAir ? 20 : 14
-
-    return (
-      <g>
-        {/* Background track */}
-        <rect x={-totalW / 2} y={barY} width={totalW} height={3} fill="#d0c8b0" stroke="#9a8860" strokeWidth="0.5" rx="1.5" />
-        {/* Filled portion */}
-        <rect
-          x={-totalW / 2}
-          y={barY}
-          width={filledW}
-          height={3}
-          fill={
-            pct > 70 ? (isBlue ? '#2060c0' : '#c02020')
-            : pct > 40 ? '#c08020'
-            : '#c04040'
-          }
-          rx="1.5"
-        />
-      </g>
-    )
-  }
-
   return (
     <g
       transform={`translate(${entity.position.x}, ${entity.position.y})`}
@@ -234,23 +194,23 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
       onMouseEnter={() => onHover?.(true)}
       onMouseLeave={() => onHover?.(false)}
     >
-      {/* ── Ground Force Zone Radius (dashed perimeter) ── */}
+      {/* Ground Force Zone Radius */}
       {!isAir && !isDestroyed && (
         <circle
           cx="0"
           cy="0"
           r={entity.strength.footprintRadius}
-          fill={isBlue ? 'rgba(20,60,160,0.05)' : 'rgba(160,20,20,0.05)'}
-          stroke={isBlue ? '#1a4080' : '#9a2020'}
+          fill={isBlue ? 'rgba(74, 144, 226, 0.08)' : 'rgba(211, 47, 47, 0.08)'}
+          stroke={isBlue ? '#4a90e2' : '#d32f2f'}
           strokeWidth="0.8"
           strokeDasharray="4 4"
-          opacity={selected ? 0.75 : 0.30}
+          opacity={selected ? 0.85 : 0.4}
         />
       )}
 
-      {/* ── Selection brackets (amber corner targets) ── */}
+      {/* Selection brackets */}
       {selected && (
-        <g stroke="#c07820" strokeWidth="2" fill="none" opacity="0.9">
+        <g stroke="#f59e0b" strokeWidth="2" fill="none" opacity="0.95">
           <path d="M -20 -14 L -20 -20 L -14 -20" />
           <path d="M 14 -20 L 20 -20 L 20 -14" />
           <path d="M 20 14 L 20 20 L 14 20" />
@@ -258,9 +218,8 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
         </g>
       )}
 
-      {/* ── Main tactical frame ── */}
+      {/* Main tactical frame */}
       {isAir ? (
-        // Air: diamond frame
         <polygon
           points="0,-17 18,0 0,17 -18,0"
           fill={frameFill}
@@ -268,7 +227,6 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
           strokeWidth={selected ? 2.5 : 1.8}
         />
       ) : (
-        // Ground: rectangular frame
         <rect
           x="-16"
           y="-12"
@@ -281,19 +239,16 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
         />
       )}
 
-      {/* ── Echelon size modifier (hash lines above frame) ── */}
+      {/* Echelon size modifier */}
       {renderEchelon()}
 
-      {/* ── Inside tactical glyph ── */}
+      {/* Inside glyph */}
       {renderGlyph()}
 
-      {/* ── Physical formation footprint (strength-scaled grid) ── */}
-      {renderFormationFootprint()}
+      {/* Strength blocks */}
+      {renderStrengthBlocks()}
 
-      {/* ── Strength bar ── */}
-      {renderStrengthBar()}
-
-      {/* ── Unit identification label (above frame) ── */}
+      {/* Unit ID label (crisp white text with dark outline halo) */}
       <text
         x="0"
         y="-20"
@@ -304,15 +259,15 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
         fill={labelFill}
         style={{
           paintOrder: 'stroke',
-          stroke: '#f0e8d8',
-          strokeWidth: '2.5px',
+          stroke: '#020617',
+          strokeWidth: '3px',
           letterSpacing: '0.5px',
         }}
       >
         {entity.id}
       </text>
 
-      {/* ── Altitude label for air units ── */}
+      {/* Altitude label for air */}
       {isAir && entity.altitude && !isDestroyed && (
         <text
           x="0"
@@ -320,22 +275,22 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
           textAnchor="middle"
           fontFamily="'JetBrains Mono', monospace"
           fontSize="7.5"
-          fill="#3a3a3a"
-          style={{ paintOrder: 'stroke', stroke: '#f0e8d8', strokeWidth: '2px' }}
+          fill="#4a90e2"
+          style={{ paintOrder: 'stroke', stroke: '#020617', strokeWidth: '2.5px' }}
         >
           {(entity.altitude / 1000).toFixed(1)}km
         </text>
       )}
 
-      {/* ── Damage marker: amber ⚠ badge ── */}
+      {/* Damage marker */}
       {isDamaged && !isDestroyed && (
         <g transform="translate(14, -14)">
-          <polygon points="0,-6 5.2,3 -5.2,3" fill="#c08020" />
-          <text x="0" y="2.5" textAnchor="middle" fill="#ffffff" fontSize="6" fontWeight="bold">!</text>
+          <polygon points="0,-6 5.2,3 -5.2,3" fill="#f59e0b" />
+          <text x="0" y="2.5" textAnchor="middle" fill="#000000" fontSize="6" fontWeight="bold">!</text>
         </g>
       )}
 
-      {/* ── Destroyed X marker (large, centered) ── */}
+      {/* Destroyed KIA marker */}
       {isDestroyed && (
         <text
           x="28"
@@ -343,8 +298,8 @@ export const TacticalMilitarySymbol: React.FC<TacticalSymbolProps> = ({
           textAnchor="middle"
           fontFamily="'JetBrains Mono', monospace"
           fontSize="8"
-          fill="#a03030"
-          style={{ paintOrder: 'stroke', stroke: '#f0e8d8', strokeWidth: '2px' }}
+          fill="#ef4444"
+          style={{ paintOrder: 'stroke', stroke: '#020617', strokeWidth: '2.5px' }}
         >
           KIA
         </text>

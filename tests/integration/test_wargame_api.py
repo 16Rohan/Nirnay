@@ -151,7 +151,7 @@ def test_wargame_session_init_and_websocket_streaming():
         # Receive streamed messages
         received_event_types = []
         simulation_completed_received = False
-        for _ in range(30):
+        for _ in range(100):
             try:
                 data = websocket.receive_json(mode="text")
                 if data.get("type") == "stage_event":

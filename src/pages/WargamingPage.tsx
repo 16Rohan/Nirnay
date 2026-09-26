@@ -33,6 +33,7 @@ import Navbar from '../components/layout/Navbar'
 import { TacticalArena2D, ARENA_VIEWPORTS } from '../components/tactical_arena_2d/TacticalArena2D'
 import { SYNTHETIC_BATTLEFIELD_MAP } from '../components/tactical_arena_2d/TerrainMapConfig'
 import { mapSimulationToTacticalArena2D } from '../adapters/tacticalArena2dAdapter'
+import { MarkdownRenderer } from '../components/MarkdownRenderer'
 import { TacticalInspector } from '../components/tactical_arena_2d/TacticalInspector'
 import type { ArenaViewMode, TacticalEntity2D, TacticalObjective2D, TacticalEvent2D } from '../types/tactical_arena_2d'
 import '../styles/simulation.css'
@@ -1306,8 +1307,8 @@ export default function WargamingPage() {
                 ✕
               </button>
             </div>
-            <div className="p-6 overflow-y-auto font-mono text-xs text-[#F5FAFF] leading-relaxed whitespace-pre-wrap select-text">
-              {displayedTurn.strategic_report}
+            <div className="p-6 overflow-y-auto font-mono text-xs text-[#F5FAFF] leading-relaxed select-text">
+              <MarkdownRenderer content={displayedTurn.strategic_report} />
             </div>
             <div className="p-4 border-t border-white/10 flex justify-end bg-[#081521]">
               <button

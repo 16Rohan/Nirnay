@@ -3,7 +3,8 @@ State definition for LangGraph wargaming orchestration pipeline.
 Carries structured contracts between agent and deterministic execution nodes.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Annotated
+import operator
 from pydantic import BaseModel, Field
 from backend.schemas.contracts import (
     ScenarioContract,
@@ -26,6 +27,7 @@ class WargameState(BaseModel):
     max_iterations: int = 2
     human_guidance: str = "Maintain defensive redoubt at LOC-ALPHA; avoid cross-border escalation."
     turn_based: bool = False
+    seed: int = 42
     
     # State Artifacts / Contracts
     context: Optional[ResolvedAgentContext] = None
@@ -48,4 +50,4 @@ class WargameState(BaseModel):
     
     concluded: bool = False
     strategic_report: Optional[str] = None
-    step_logs: List[str] = Field(default_factory=list)
+    step_logs: Annotated[List[str], operator.add] = Field(default_factory=list)

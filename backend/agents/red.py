@@ -20,7 +20,7 @@ class RedTeamAgent:
     def _deterministic_fallback(
         self,
         contract: ScenarioContract,
-        blue_coa: BlueTeamOutput,
+        blue_coa: Optional[BlueTeamOutput],
         previous_sim_output: Optional[SimulationOutput] = None,
         previous_red_output: Optional[RedTeamOutput] = None,
     ) -> RedTeamOutput:
@@ -29,8 +29,12 @@ class RedTeamAgent:
         active_r_units = [u for u in r_units if u.get("strength", 0) > 0]
         unit_id = active_r_units[0].get("id", "RED-DIV-1") if active_r_units else (r_units[0].get("id", "RED-DIV-1") if r_units else "RED-DIV-1")
         
-        blue_name = blue_coa.decision.name.lower()
-        blue_intent = blue_coa.decision.intent.lower()
+        if blue_coa:
+            blue_name = blue_coa.decision.name.lower()
+            blue_intent = blue_coa.decision.intent.lower()
+        else:
+            blue_name = "unknown"
+            blue_intent = "unknown"
 
         # Strategic Adaptation based on Blue's observed Course of Action
         if any(kw in blue_name or kw in blue_intent for kw in ["withdraw", "delaying", "retrograde"]):
@@ -81,7 +85,7 @@ class RedTeamAgent:
             scenario_id=contract.scenario_id,
             response_id=f"RED-RESP-{contract.scenario_id}",
             assessment=RedAssessment(
-                blue_coa_reference=blue_coa.decision.course_of_action_id,
+                blue_coa_reference=blue_coa.decision.course_of_action_id if blue_coa else "UNKNOWN",
                 red_objective=red_obj,
                 intent=red_intent
             ),
@@ -106,15 +110,15 @@ class RedTeamAgent:
         self,
         contract: ScenarioContract,
         env_assessment: EnvironmentOutput,
-        blue_coa: BlueTeamOutput,
+        blue_coa: Optional[BlueTeamOutput],
         previous_sim_output: Optional[SimulationOutput] = None,
         previous_red_output: Optional[RedTeamOutput] = None,
     ) -> RedTeamOutput:
         system_prompt = (
             "You are the RED TEAM OPPOSING FORCE AGENT in the NIRNAY strategic wargaming platform.\n"
-            "Formulate an adaptive, strategically coherent response directly addressing Blue's observed decision.\n"
+            "Formulate an adaptive, strategically coherent response independently. "
             "INTELLIGENCE REQUIREMENTS:\n"
-            "1. Adversarial Adaptation: If Blue fortifies, do NOT perform a naive frontal charge; use standoff fires, bypasses, or deception.\n"
+            "1. Adversarial Adaptation: Base your planning on previous intelligence and current environment.\n"
             "2. Exploit Vulnerabilities: If Blue withdraws or preserves fuel, advance aggressively to seize terrain.\n"
             "3. Non-repetition: Avoid repeating identical actions unless explicitly justified by tactical battlefield state.\n"
             "Output MUST strictly adhere to the RedTeamOutput schema."
@@ -123,8 +127,8 @@ class RedTeamAgent:
         user_prompt = (
             f"Scenario ID: {contract.scenario_id}\n"
             f"Red Doctrine & Forces: {contract.forces.get('red', [])}\n"
-            f"Observed Blue Course of Action: {blue_coa.decision.name} - {blue_coa.decision.intent}\n"
-            f"Blue Actions: {blue_coa.actions}\n"
+            f"Previously Observed Blue Course of Action: {blue_coa.decision.name if blue_coa else 'None'} - {blue_coa.decision.intent if blue_coa else 'None'}\n"
+            f"Previous Blue Actions: {blue_coa.actions if blue_coa else 'None'}\n"
             f"Environmental Assessment: {env_assessment.operational_implications.red if env_assessment else 'None'}\n"
             f"Previous Combat Metrics: {previous_sim_output.metrics if previous_sim_output else 'None (Turn 1)'}\n"
             f"Previous Red Stance: {previous_red_output.assessment.intent if previous_red_output else 'None (Turn 1)'}\n"

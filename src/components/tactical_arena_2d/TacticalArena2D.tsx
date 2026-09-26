@@ -77,7 +77,7 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
 
   return (
     <div
-      className="w-full h-full relative select-none overflow-hidden bg-[#040b12] flex items-center justify-center"
+      className="w-full h-full relative select-none overflow-hidden bg-[#1a1917] flex items-center justify-center"
       style={{ perspective: '2000px' }}
     >
       <div
@@ -85,22 +85,10 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
         style={{
           transform: 'rotateX(55deg) rotateZ(-35deg) scale(0.95)',
           transformStyle: 'preserve-3d',
-          background: '#c8bfa0',
-          borderRadius: '8px',
-          boxShadow: 'inset 0 0 0 3px #8a7850, 0 30px 60px rgba(0,0,0,0.6)',
+          background: 'transparent',
         }}
       >
-      {/* ── Map frame: cartographic border with coordinate labels ── */}
-      <div
-        className="absolute inset-0 pointer-events-none z-10"
-        style={{
-          background: 'transparent',
-          border: '12px solid #b0a070',
-          boxSizing: 'border-box',
-          borderRadius: '6px',
-          boxShadow: 'inset 0 0 0 2px #8a7040, inset 0 0 0 4px #d0c090',
-        }}
-      />
+      {/* Map frame: subtle fade replaced the hard border */}
 
       <svg
         viewBox={viewBox}
@@ -127,48 +115,48 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
               .filter(e => e.route.length > 1 && e.status !== 'DESTROYED')
               .map(entity => {
                 const isBlue = entity.faction === 'BLUE'
-                // Restrained route colors: deep navy for blue, dark brick for red
-                const lineColor = isBlue ? '#1a3a7a' : '#8a1a1a'
+                // High contrast dark tactical route colors: restrained blue for blue, restrained red for red
+                const lineColor = isBlue ? '#4a90e2' : '#d32f2f'
                 const pathD = entity.route.reduce((acc, curr, idx) => {
                   return idx === 0 ? `M ${curr.x} ${curr.y}` : `${acc} L ${curr.x} ${curr.y}`
                 }, '')
 
                 return (
                   <g key={`route-${entity.id}`}>
-                    {/* Route casing */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke="#e8dfc8"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity="0.6"
-                    />
-                    {/* Route line */}
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={lineColor}
-                      strokeWidth="2"
-                      strokeDasharray="8 5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity="0.75"
-                    />
-                    {/* Direction arrowhead at final waypoint */}
-                    {entity.route.length >= 2 && (() => {
-                      const last = entity.route[entity.route.length - 1]
-                      const prev = entity.route[entity.route.length - 2]
-                      const dx = last.x - prev.x
-                      const dy = last.y - prev.y
-                      const angle = Math.atan2(dy, dx) * (180 / Math.PI)
+                    {/* Segmented Route lines */}
+                    {entity.route.slice(0, -1).map((pt, i) => {
+                      const nextPt = entity.route[i + 1]
+                      const isActual = i === 0
+                      const isPlanned = i === 1
+                      const strokeDash = isActual ? 'none' : isPlanned ? '8 5' : '2 4'
+                      const segmentOpacity = isActual ? 0.95 : isPlanned ? 0.80 : 0.55
+
                       return (
-                        <g transform={`translate(${last.x}, ${last.y}) rotate(${angle})`}>
-                          <polygon points="8,0 -4,-4 -4,4" fill={lineColor} opacity="0.85" />
+                        <g key={`seg-${i}`}>
+                          <line
+                            x1={pt.x}
+                            y1={pt.y}
+                            x2={nextPt.x}
+                            y2={nextPt.y}
+                            stroke={lineColor}
+                            strokeWidth="2"
+                            strokeDasharray={strokeDash}
+                            strokeLinecap="round"
+                            opacity={segmentOpacity}
+                          />
+                          {/* Arrow on last segment */}
+                          {i === entity.route.length - 2 && (
+                            <g
+                              transform={`translate(${nextPt.x}, ${nextPt.y}) rotate(${
+                                Math.atan2(nextPt.y - pt.y, nextPt.x - pt.x) * (180 / Math.PI)
+                              })`}
+                            >
+                              <polygon points="8,0 -4,-4 -4,4" fill={lineColor} opacity="0.9" />
+                            </g>
+                          )}
                         </g>
                       )
-                    })()}
+                    })}
                     {/* Waypoint dots */}
                     {entity.route.slice(0, -1).map((pt, i) => (
                       <circle
@@ -177,7 +165,7 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
                         cy={pt.y}
                         r={2}
                         fill={lineColor}
-                        opacity="0.6"
+                        opacity="0.8"
                       />
                     ))}
                   </g>
@@ -223,15 +211,15 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
         {/* ── Cartographic North Arrow ── */}
         <g transform="translate(52, 52)" className="select-none pointer-events-none">
           {/* Background circle */}
-          <circle cx="0" cy="0" r="22" fill="#f0e8d0" stroke="#8a7050" strokeWidth="1.5" opacity="0.95" />
+          <circle cx="0" cy="0" r="22" fill="#2a2722" stroke="#4a443e" strokeWidth="1.5" opacity="0.95" />
           {/* North pointer (red) */}
-          <polygon points="0,-16 4,2 0,-2 -4,2" fill="#a03020" />
-          {/* South pointer (white/cream) */}
-          <polygon points="0,16 4,0 0,2 -4,0" fill="#c8bfa0" stroke="#8a7050" strokeWidth="0.8" />
+          <polygon points="0,-16 4,2 0,-2 -4,2" fill="#d32f2f" />
+          {/* South pointer (slate) */}
+          <polygon points="0,16 4,0 0,2 -4,0" fill="#57534e" stroke="#4a443e" strokeWidth="0.8" />
           {/* Centre dot */}
-          <circle cx="0" cy="0" r="2.5" fill="#8a7050" />
+          <circle cx="0" cy="0" r="2.5" fill="#a8a29e" />
           {/* N label */}
-          <text x="0" y="-23" textAnchor="middle" fill="#3a2a10"
+          <text x="0" y="-23" textAnchor="middle" fill="#a8a29e"
             fontFamily="'JetBrains Mono', monospace" fontSize="10" fontWeight="700">N</text>
         </g>
 
@@ -239,21 +227,21 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
         <g transform={`translate(${mapConfig.width - 140}, ${mapConfig.height - 38})`}
           className="select-none pointer-events-none">
           <rect x="-4" y="-10" width="130" height="24" rx="2"
-            fill="#f0e8d0" stroke="#8a7050" strokeWidth="1" opacity="0.9" />
+            fill="#2a2722" stroke="#4a443e" strokeWidth="1" opacity="0.9" />
           {/* Scale line */}
-          <line x1="4" y1="0" x2="120" y2="0" stroke="#3a2a10" strokeWidth="1.5" />
-          <line x1="4" y1="-4" x2="4" y2="4" stroke="#3a2a10" strokeWidth="1.5" />
-          <line x1="62" y1="-3" x2="62" y2="3" stroke="#3a2a10" strokeWidth="1" />
-          <line x1="120" y1="-4" x2="120" y2="4" stroke="#3a2a10" strokeWidth="1.5" />
+          <line x1="4" y1="0" x2="120" y2="0" stroke="#78716c" strokeWidth="1.5" />
+          <line x1="4" y1="-4" x2="4" y2="4" stroke="#78716c" strokeWidth="1.5" />
+          <line x1="62" y1="-3" x2="62" y2="3" stroke="#78716c" strokeWidth="1" />
+          <line x1="120" y1="-4" x2="120" y2="4" stroke="#78716c" strokeWidth="1.5" />
           {/* Alternating blocks */}
-          <rect x="4" y="-3" width="29" height="6" fill="#3a2a10" />
-          <rect x="62" y="-3" width="29" height="6" fill="#3a2a10" />
+          <rect x="4" y="-3" width="29" height="6" fill="#78716c" />
+          <rect x="62" y="-3" width="29" height="6" fill="#78716c" />
           {/* Labels */}
-          <text x="4" y="12" textAnchor="middle" fill="#3a2a10"
+          <text x="4" y="12" textAnchor="middle" fill="#d6d3d1"
             fontFamily="'JetBrains Mono', monospace" fontSize="7">0</text>
-          <text x="62" y="12" textAnchor="middle" fill="#3a2a10"
+          <text x="62" y="12" textAnchor="middle" fill="#d6d3d1"
             fontFamily="'JetBrains Mono', monospace" fontSize="7">10km</text>
-          <text x="120" y="12" textAnchor="middle" fill="#3a2a10"
+          <text x="120" y="12" textAnchor="middle" fill="#d6d3d1"
             fontFamily="'JetBrains Mono', monospace" fontSize="7">20km</text>
         </g>
 
@@ -262,10 +250,10 @@ export const TacticalArena2D: React.FC<TacticalArena2DProps> = ({
           x={mapConfig.width - 8}
           y={mapConfig.height - 12}
           textAnchor="end"
-          fill="#7a6840"
+          fill="#78716c"
           fontFamily="'JetBrains Mono', monospace"
           fontSize="8"
-          opacity="0.55"
+          opacity="0.65"
         >
           {mapConfig.id} · NIRNAY TACTICAL SIM
         </text>

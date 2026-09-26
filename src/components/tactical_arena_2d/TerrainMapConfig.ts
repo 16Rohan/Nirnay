@@ -4,23 +4,13 @@ import type { TerrainMapConfiguration } from '../../types/tactical_arena_2d'
  * EASTERN_VALLEY_01 – Deterministic Synthetic Battlefield
  * Dimensions: 1200 × 800 cartographic canvas
  *
- * Features:
- *  - Northern Mountain Ridge (defiles, dominant terrain)
- *  - Western Pine Forest (concealment belt)
- *  - Eastern Woods (Red covered approach)
- *  - Central Open Plain (maneuver corridor)
- *  - Southern Wetland Delta (restricted mobility)
- *  - Corridor River (NW→SE, two tactical crossing bridges)
- *  - MSR Alpha (main paved supply route)
- *  - Forward Logistics Base Alpha, Eastern Airfield, Valley Relay Outpost
- *
- * Color palette: realistic topographic map (not cyberpunk)
- *  - Open terrain: warm sandy-tan (like IGN/OS topographic sheets)
- *  - Forest: muted pine green
- *  - Mountain: stone grey-brown with darker value
- *  - Wetland: muted olive-grey
- *  - Water: standard cartographic slate blue
- *  - Roads: warm cream/buff
+ * Color palette: Tactical Dark Topographic Command Palette
+ *  - Open terrain: dark slate operational ground
+ *  - Forest: deep tactical pine green
+ *  - Mountain: dark granite ridge stone
+ *  - Wetland: dark tactical wetland teal
+ *  - Water: tactical cyan blue
+ *  - Roads: amber gold supply routes
  */
 export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
   id: 'EASTERN_VALLEY_01',
@@ -30,7 +20,7 @@ export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
   gridSize: 100,
 
   regions: [
-    // ── Base: warm sandy-tan open terrain (like printed topo paper)
+    // ── Base: dark operational open terrain
     {
       id: 'central_plain',
       name: 'Central Plain',
@@ -38,10 +28,10 @@ export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
       polygon: [
         [0, 0], [1200, 0], [1200, 800], [0, 800],
       ],
-      fill: '#d8ceac',  // Warm sandy parchment – standard topo open ground
+      fill: '#2e2d27',
     },
 
-    // ── Northern Mountain Ridge: stone-grey with warm undertone
+    // ── Northern Mountain Ridge: dark muted gray-brown
     {
       id: 'north_ridge',
       name: 'Northern Ridgeline & Peaks',
@@ -52,11 +42,11 @@ export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
         [600, 210], [450, 140], [300, 230],
         [150, 170], [0, 200],
       ],
-      fill: '#b0a48a',  // Stone-brown mountain: slightly darker than open terrain
+      fill: '#363330',
       elevation: 680,
     },
 
-    // ── Western Pine Forest: muted earthy green (conifer green, like OS maps)
+    // ── Western Pine Forest: realistic dark pine green
     {
       id: 'western_forest',
       name: 'Western Pine Forest',
@@ -65,7 +55,7 @@ export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
         [40, 220], [240, 240], [320, 380],
         [280, 560], [180, 680], [40, 700], [20, 480],
       ],
-      fill: '#7a9068',  // Muted pine green
+      fill: '#1b2920',
     },
 
     // ── Eastern Woods: Red's concealed approach
@@ -77,10 +67,10 @@ export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
         [940, 220], [1160, 200], [1180, 420],
         [1020, 400], [920, 300],
       ],
-      fill: '#7a9068',
+      fill: '#1b2920',
     },
 
-    // ── Southern Wetland: muted olive-grey (bog/swamp topo color)
+    // ── Southern Wetland: natural dark marsh
     {
       id: 'southern_wetland',
       name: 'Southern Wetland Delta',
@@ -89,7 +79,7 @@ export const SYNTHETIC_BATTLEFIELD_MAP: TerrainMapConfiguration = {
         [350, 680], [580, 640], [850, 660],
         [1000, 800], [300, 800],
       ],
-      fill: '#9aaa80',  // Wetland olive-grey
+      fill: '#182928',
     },
   ],
 
