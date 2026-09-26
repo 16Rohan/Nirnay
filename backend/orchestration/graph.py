@@ -198,14 +198,11 @@ def node_validate_contract(state: WargameState) -> Dict[str, Any]:
     return {"validation_passed": True, "validation_errors": [], "step_logs": state.step_logs + [log]}
 
 
-def node_materialize_scenario(state: WargameState) -> Dict[str, Any]:
-    _log(f"[bold cyan]>> [SCENARIO GENERATOR][/bold cyan] Materializing concrete simulation state...")
-    sim_state = generator.materialize(state.scenario_contract, seed=42)
-    b_count = len(sim_state["blue_forces"])
-    r_count = len(sim_state["red_forces"])
-    log = f"[SCENARIO GENERATOR] Materialized deterministic simulation state (Blue forces: {b_count}, Red forces: {r_count})"
-    _log(f"   [SCENARIO GENERATOR] State instantiated: {b_count} Blue unit(s), {r_count} Red unit(s).")
-    return {"step_logs": state.step_logs + [log]}
+# node_materialize_scenario REMOVED: its output was never stored in WargameState
+# and was therefore never consumed by node_simulation. The force state is already
+# carried correctly through scenario_contract (overwritten with prev_final_state
+# in node_orchestrator for Turn N>1). Removing this dead node saves one compute
+# call per turn and eliminates the misleading log entry.
 
 
 def node_environment(state: WargameState) -> Dict[str, Any]:
@@ -417,7 +414,9 @@ def node_simulation(state: WargameState) -> Dict[str, Any]:
         rules={"rules": contract.rules.simulation_rules},
         previous_actions=state.previous_simulation_output.action_results if state.previous_simulation_output else [],
         time_horizon=contract.metadata.time_horizon,
-        seed=42,
+        # Use iteration_count as seed offset so each turn is reproducible but unique.
+        # The DeterministicSimulator further multiplies: turn_seed = seed + turn * 101
+        seed=state.iteration_count,
         special_events=special_events,
         human_intent=human_intent_dict,
         hard_constraints=hard_constraints
@@ -614,7 +613,7 @@ def create_wargame_graph():
     graph.add_node("load_context", node_load_context)
     graph.add_node("orchestrator", node_orchestrator)
     graph.add_node("validate_contract", node_validate_contract)
-    graph.add_node("materialize_scenario", node_materialize_scenario)
+    # materialize_scenario removed: was a dead node (output never stored/consumed)
     graph.add_node("environment", node_environment)
     graph.add_node("blue_team", node_blue_team)
     graph.add_node("red_team", node_red_team)
@@ -628,8 +627,8 @@ def create_wargame_graph():
     graph.add_edge(START, "load_context")
     graph.add_edge("load_context", "orchestrator")
     graph.add_edge("orchestrator", "validate_contract")
-    graph.add_edge("validate_contract", "materialize_scenario")
-    graph.add_edge("materialize_scenario", "environment")
+    # validate_contract → environment (materialize_scenario removed from pipeline)
+    graph.add_edge("validate_contract", "environment")
     graph.add_edge("environment", "blue_team")
     graph.add_edge("blue_team", "red_team")
     graph.add_edge("red_team", "simulation")

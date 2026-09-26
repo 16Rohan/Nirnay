@@ -402,86 +402,124 @@ class DeterministicSimulator:
         # ========================================================
         # Phase 3: Combat Engagement & Lanchester Resolution
         # ========================================================
+        # All active units on each side contribute to the composite combat power.
+        # Attrition is proportionally distributed across all active units.
+        # This ensures multi-unit forces behave correctly (not just lead-unit combat).
         blue_losses_pct = 0.0
         red_losses_pct = 0.0
 
         b_active = [u for u in blue_state.values() if u.get("strength", 0) > 0]
         r_active = [u for u in red_state.values() if u.get("strength", 0) > 0]
-        
+
         b_offensive = any(u.get("status") in ("ADVANCING", "ENGAGING", "STRIKE") for u in blue_state.values())
         r_offensive = any(u.get("status") in ("ADVANCING", "ENGAGING", "STRIKE") for u in red_state.values())
 
         if b_active and r_active and (b_offensive or r_offensive):
-            b_unit = b_active[0]
-            r_unit = r_active[0]
+            # Composite force strength (sum of all active units)
+            b_total_str = float(sum(u.get("strength", 0) for u in b_active))
+            r_total_str = float(sum(u.get("strength", 0) for u in r_active))
 
-            # Posture Multipliers
-            b_mult = 1.5 if b_unit.get("status") == "FORTIFIED" else (1.2 if b_unit.get("status") == "DEFENDING" else 1.0)
-            r_mult = 1.1 if r_unit.get("status") == "ADVANCING" else (1.4 if r_unit.get("status") == "FORTIFIED" else 1.0)
+            # Determine dominant posture for posture multiplier (use strongest unit's status)
+            b_dominant = max(b_active, key=lambda u: u.get("strength", 0))
+            r_dominant = max(r_active, key=lambda u: u.get("strength", 0))
 
-            # Weather / terrain mobility penalties
+            b_mult = 1.5 if b_dominant.get("status") == "FORTIFIED" else (1.2 if b_dominant.get("status") == "DEFENDING" else 1.0)
+            r_mult = 1.1 if r_dominant.get("status") == "ADVANCING" else (1.4 if r_dominant.get("status") == "FORTIFIED" else 1.0)
+
+            # Weather/terrain penalties on advancing forces
             weather_cond = str(sim_input.environment.get("weather", {}).get("condition", "Clear")).lower()
             if "rain" in weather_cond or "mud" in weather_cond or "snow" in weather_cond:
-                r_mult *= 0.85  # offensive armored advance penalized in mud/rain
+                r_mult *= 0.85  # Penalize advancing armored in adverse weather
+                if b_offensive:  # Blue also penalized if advancing in bad weather
+                    b_mult *= 0.90
 
-            b_power = float(b_unit.get("strength", 100)) * b_mult
-            r_power = float(r_unit.get("strength", 100)) * r_mult
+            b_power = b_total_str * b_mult
+            r_power = r_total_str * r_mult
 
             ratio = b_power / max(r_power, 1.0)
 
             if ratio >= 1.2:
-                # Strong Blue advantage
-                b_loss = int(4 + rng.randint(1, 3))
-                r_loss = int(12 + rng.randint(2, 6))
+                b_loss_pct_of_total = (4 + rng.randint(1, 3)) / max(b_total_str, 1.0)
+                r_loss_pct_of_total = (12 + rng.randint(2, 6)) / max(r_total_str, 1.0)
             elif ratio >= 0.8:
-                # Symmetrical contest
-                b_loss = int(6 + rng.randint(2, 4))
-                r_loss = int(8 + rng.randint(2, 5))
+                b_loss_pct_of_total = (6 + rng.randint(2, 4)) / max(b_total_str, 1.0)
+                r_loss_pct_of_total = (8 + rng.randint(2, 5)) / max(r_total_str, 1.0)
             else:
-                # Red tactical advantage
-                b_loss = int(10 + rng.randint(2, 6))
-                r_loss = int(5 + rng.randint(1, 3))
+                b_loss_pct_of_total = (10 + rng.randint(2, 6)) / max(b_total_str, 1.0)
+                r_loss_pct_of_total = (5 + rng.randint(1, 3)) / max(r_total_str, 1.0)
 
-            orig_b_str = float(b_unit.get("strength", 100))
-            orig_r_str = float(r_unit.get("strength", 100))
+            # Distribute attrition proportionally across all active units
+            b_total_lost = 0
+            for u in b_active:
+                unit_str = float(u.get("strength", 0))
+                unit_loss = int(unit_str * b_loss_pct_of_total)
+                u["strength"] = max(0, int(unit_str - unit_loss))
+                if u["strength"] <= 0:
+                    u["status"] = "DESTROYED"
+                b_total_lost += unit_loss
 
-            b_unit["strength"] = max(0, int(orig_b_str - b_loss))
-            r_unit["strength"] = max(0, int(orig_r_str - r_loss))
+            r_total_lost = 0
+            for u in r_active:
+                unit_str = float(u.get("strength", 0))
+                unit_loss = int(unit_str * r_loss_pct_of_total)
+                u["strength"] = max(0, int(unit_str - unit_loss))
+                if u["strength"] <= 0:
+                    u["status"] = "DESTROYED"
+                r_total_lost += unit_loss
 
-            blue_losses_pct = round((b_loss / max(orig_b_str, 1.0)) * 100, 1)
-            red_losses_pct = round((r_loss / max(orig_r_str, 1.0)) * 100, 1)
+            # Whole-force losses percentage (used for termination and metrics)
+            blue_losses_pct = round((b_total_lost / max(b_total_str, 1.0)) * 100, 1)
+            red_losses_pct = round((r_total_lost / max(r_total_str, 1.0)) * 100, 1)
 
             events.append({
                 "event_id": f"SIM-EV-{sim_input.current_turn:02d}",
                 "name": "Chokepoint Sector Engagement",
                 "location": "LOC-BRAVO",
-                "blue_losses": b_loss,
-                "red_losses": r_loss,
+                "blue_losses": b_total_lost,
+                "red_losses": r_total_lost,
                 "resolved": True
             })
             timeline.append({
                 "tick": 4,
-                "description": f"Tactical skirmish adjudicated at LOC-BRAVO: Blue sustained {b_loss} casualties ({blue_losses_pct}%); Red sustained {r_loss} casualties ({red_losses_pct}%)."
+                "description": f"Tactical engagement adjudicated at LOC-BRAVO: Blue sustained {b_total_lost} casualties ({blue_losses_pct}%); Red sustained {r_total_lost} casualties ({red_losses_pct}%)."
             })
 
         # ========================================================
-        # Phase 4: Emergent Environmental Shifts
+        # Phase 4: State-Derived Environmental Events
         # ========================================================
+        # Events must correspond to actual simulation state, NOT hardcoded scripts.
+        # River crossing contested? Generate crossing impediment event.
         env_assessment = sim_input.environment
-        if sim_input.current_turn == 1:
+        river_level = env_assessment.get("river_level", "normal")
+        weather_cond = str(env_assessment.get("weather", {}).get("condition", "Clear")).lower()
+
+        # River crossing impediment: if any Red unit is advancing toward a crossing location
+        red_crossing = any(
+            u.get("status") in ("ADVANCING",) and "BRAVO" in str(u.get("location", "")).upper()
+            for u in red_state.values()
+        )
+        if red_crossing and ("rain" in weather_cond or river_level in ("high", "flood")):
             emergent_events.append({
-                "event_id": f"EVT-SIM-{sim_input.current_turn:02d}",
+                "event_id": f"EVT-SIM-{sim_input.current_turn:02d}-RIVER",
                 "type": "environmental_shift",
-                "description": "Rising river discharge rate impedes further mechanized crossing without engineering assets.",
-                "impact": "Red offensive momentum paused north of the river boundary."
+                "description": "Rising river discharge impedes mechanized crossing without engineering assets.",
+                "impact": "Red offensive momentum slowed at river boundary."
             })
-        elif sim_input.current_turn == 2:
-            emergent_events.append({
-                "event_id": f"EVT-SIM-{sim_input.current_turn:02d}",
-                "type": "infrastructure_degradation",
-                "description": "Heavy transport along secondary bypass causes route degradation and logistical friction.",
-                "impact": "Fuel consumption for redeployments increased by 20%."
-            })
+
+        # Route degradation: triggered if heavy vehicle activity has occurred in prior turns
+        if sim_input.current_turn > 1 and sim_input.previous_actions:
+            heavy_activity = sum(
+                1 for act in sim_input.previous_actions
+                if isinstance(act, dict) and act.get("status") == "EXECUTED"
+                and act.get("actor") in ("blue", "red")
+            )
+            if heavy_activity >= 3:
+                emergent_events.append({
+                    "event_id": f"EVT-SIM-{sim_input.current_turn:02d}-ROUTE",
+                    "type": "infrastructure_degradation",
+                    "description": "Heavy vehicle traffic has caused route degradation on secondary bypass roads.",
+                    "impact": "Resupply movement costs increased for this turn."
+                })
 
         # ========================================================
         # Phase 5: Objectives Evaluation
